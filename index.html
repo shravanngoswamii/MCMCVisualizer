@@ -5,109 +5,456 @@
   <title>MCMCVisualizer Demo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    body { font-family: system-ui, -apple-system, sans-serif; background: #0f1117; color: #e0e0e0; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    header { padding: 20px 32px 0; }
-    header h1 { font-size: 1.4rem; margin: 0 0 2px; }
-    header p { color: #666; font-size: 0.82rem; margin: 0; }
-
-    .toolbar { display: flex; align-items: center; gap: 12px; padding: 16px 32px; flex-wrap: wrap; }
-    .toolbar label { font-size: 0.78rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
-    .toolbar select, .toolbar button {
-      background: #1a1d27; color: #e0e0e0; border: 1px solid #333; border-radius: 6px;
-      padding: 6px 14px; font-size: 0.82rem; cursor: pointer; transition: border-color 0.15s;
+    :root {
+      --sidebar-w: 360px;
+      --bg-primary: #0c0e14;
+      --bg-secondary: #13151e;
+      --bg-sidebar: #111320;
+      --bg-card: #181b26;
+      --border: #262a3a;
+      --border-light: #2f3447;
+      --text-primary: #eaedf3;
+      --text-secondary: #9399ab;
+      --text-muted: #5c6278;
+      --accent: #6366f1;
+      --accent-hover: #818cf8;
+      --accent-subtle: rgba(99, 102, 241, 0.08);
+      --success: #34d399;
+      --error: #f87171;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+      --shadow-md: 0 4px 14px rgba(0,0,0,0.35);
+      --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    .toolbar select:hover, .toolbar button:hover { border-color: #555; }
-    .toolbar button.primary { background: #2563eb; border-color: #2563eb; color: #fff; font-weight: 500; }
-    .toolbar button.primary:hover { background: #1d4ed8; }
-    .toolbar .sep { width: 1px; height: 24px; background: #333; }
 
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(99,102,241,0.18) transparent;
+    }
+    *::-webkit-scrollbar { width: 5px; height: 5px; }
+    *::-webkit-scrollbar-track { background: transparent; }
+    *::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.18); border-radius: 4px; }
+    *::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.32); }
+
+    /* ── Two-panel shell ── */
+    .shell {
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1fr;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Left sidebar ── */
+    .sidebar {
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border);
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      overflow-y: auto;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+
+    .brand {
+      margin-bottom: 28px;
+      flex-shrink: 0;
+    }
+    .brand h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+      background: linear-gradient(135deg, #eaedf3, #9399ab);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .brand p {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      line-height: 1.5;
+    }
+
+    /* Sidebar section labels */
+    .sidebar-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin: 20px 0 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .sidebar-label .dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    /* Drop zone */
     #drop-zone {
-      margin: 0 32px 16px; border: 2px dashed #333; border-radius: 10px;
-      padding: 36px 20px; text-align: center; transition: border-color 0.2s, background 0.2s; cursor: pointer;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 28px 16px;
+      text-align: center;
+      transition: all var(--transition);
+      cursor: pointer;
+      background: var(--bg-secondary);
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
     }
-    #drop-zone.hover { border-color: #2563eb; background: rgba(37,99,235,0.06); }
-    #drop-zone h3 { margin: 0 0 4px; font-size: 0.95rem; color: #aaa; font-weight: 500; }
-    #drop-zone span { font-size: 0.78rem; color: #555; }
+    #drop-zone.compact {
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-align: left;
+    }
+    #drop-zone.compact .drop-icon { display: none; }
+    #drop-zone.compact h3 { font-size: 0.75rem; margin: 0; }
+    #drop-zone.compact span { display: none; }
+    #drop-zone::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, rgba(99,102,241,0.04), transparent 70%);
+      pointer-events: none;
+    }
+    #drop-zone:hover, #drop-zone:focus-visible {
+      border-color: var(--border-light);
+      background: var(--bg-card);
+    }
+    #drop-zone.hover {
+      border-color: var(--accent);
+      background: rgba(99, 102, 241, 0.04);
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.08);
+    }
+    .drop-icon { font-size: 1.6rem; margin-bottom: 6px; opacity: 0.35; }
+    #drop-zone h3 { font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; }
+    #drop-zone span { font-size: 0.7rem; color: var(--text-muted); display: block; }
     #file-input { display: none; }
 
-    #status { padding: 0 32px; font-size: 0.78rem; color: #22c55e; min-height: 1.2em; }
-    #status.err { color: #ef4444; }
+    #status {
+      font-size: 0.74rem;
+      color: var(--success);
+      min-height: 1.2em;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    #status.err { color: var(--error); }
 
-    section { padding: 0 32px; }
-    section h2 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: #444; margin: 20px 0 8px; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-    .full { grid-column: 1 / -1; }
+    /* Buttons & controls in sidebar */
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 10px 18px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+      box-shadow: 0 2px 8px rgba(99,102,241,0.25);
+      font-family: inherit;
+      width: 100%;
+    }
+    .btn:hover {
+      background: var(--accent-hover);
+      box-shadow: 0 4px 16px rgba(99,102,241,0.35);
+      transform: translateY(-1px);
+    }
+    .btn:active { transform: translateY(0); }
+
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-weight: 600;
+    }
+    .field select {
+      appearance: none;
+      background: var(--bg-card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239399ab' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 9px 32px 9px 12px;
+      font-size: 0.82rem;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all var(--transition);
+      width: 100%;
+    }
+    .field select:hover { border-color: var(--border-light); }
+    .field select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
+
+    /* Summary in sidebar */
+    #summary-wrap {
+      flex: 1;
+      overflow-y: auto;
+      margin-top: 4px;
+      scrollbar-width: none;
+    }
+    #summary-wrap::-webkit-scrollbar { display: none; }
+    #summary-wrap #summary { font-size: 0.78rem; }
+    #summary-wrap table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+    #summary-wrap th, #summary-wrap td { padding: 5px 6px; text-align: left; border-bottom: 1px solid var(--border); }
+    #summary-wrap th { color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.65rem; letter-spacing: 0.5px; }
+
+    /* Export in sidebar */
+    .export-bar {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+    .export-bar button {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 0.7rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+      font-family: inherit;
+    }
+    .export-bar button:hover {
+      border-color: var(--accent);
+      color: var(--text-primary);
+      background: var(--accent-subtle);
+    }
+    .export-bar button::before { content: '\2193'; font-size: 0.8rem; opacity: 0.4; }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding-top: 20px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.68rem;
+      letter-spacing: 0.3px;
+      flex-shrink: 0;
+    }
+
+    /* ── Right main content ── */
+    .main {
+      padding: 28px 32px;
+      overflow-y: auto;
+      height: 100vh;
+    }
+
+    .main-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .main-header h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    .main-header .pill {
+      background: var(--accent-subtle);
+      border: 1px solid rgba(99,102,241,0.15);
+      color: var(--accent-hover);
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 100px;
+    }
+
+    .section-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin: 28px 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-label:first-of-type { margin-top: 0; }
+    .section-label .dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .plot-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 8px;
+    }
+    .plot-grid.single { grid-template-columns: 1fr; }
+
+    .plot-cell {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      min-height: 360px;
+      transition: border-color var(--transition), box-shadow var(--transition);
+    }
+    .plot-cell:hover {
+      border-color: var(--border-light);
+      box-shadow: var(--shadow-md);
+    }
+    .plot-cell.tall { min-height: 460px; }
 
     #app { display: none; }
 
-    .export-bar { display: flex; gap: 8px; flex-wrap: wrap; padding: 4px 0 24px; }
-    .export-bar button {
-      background: #1a1d27; color: #ccc; border: 1px solid #333; border-radius: 6px;
-      padding: 5px 12px; font-size: 0.75rem; cursor: pointer; transition: border-color 0.15s;
+    /* ── Responsive: iPad landscape / small desktop ── */
+    @media (max-width: 1100px) {
+      :root { --sidebar-w: 300px; }
     }
-    .export-bar button:hover { border-color: #555; color: #fff; }
 
-    @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+    /* ── Responsive: iPad portrait / tablets ── */
+    @media (max-width: 960px) {
+      .shell {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        height: auto;
+        overflow: visible;
+      }
+      body { overflow: auto; height: auto; }
+      .sidebar {
+        position: relative;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        padding: 24px 20px;
+      }
+      .main { padding: 24px 20px; height: auto; overflow: visible; }
+      .plot-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* ── Responsive: mobile ── */
+    @media (max-width: 640px) {
+      .sidebar { padding: 20px 16px; }
+      .main { padding: 20px 16px; }
+      .brand h1 { font-size: 1.15rem; }
+      .brand p { font-size: 0.72rem; }
+      .plot-grid { grid-template-columns: 1fr; }
+      .plot-cell { min-height: 280px; }
+      .plot-cell.tall { min-height: 340px; }
+      .main-header h2 { font-size: 0.95rem; }
+      .export-bar { gap: 4px; }
+      .export-bar button { padding: 4px 8px; font-size: 0.65rem; }
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1>MCMCVisualizer</h1>
-    <p>Upload MCMC data (CSV or JSON) &mdash; or use the synthetic demo data to explore.</p>
-  </header>
-
-  <div id="drop-zone" tabindex="0">
-    <h3>Drop MCMC file here or click to browse</h3>
-    <span>Supports: Turing CSV, MCMCChains CSV, Stan CSV, MCMCChains JSON</span>
-    <input type="file" id="file-input" accept=".csv,.json,.txt">
-  </div>
-  <div id="status"></div>
-
-  <div class="toolbar">
-    <button class="primary" id="btn-demo">Load Demo Data</button>
-    <div class="sep"></div>
-    <label for="var-select">Variable</label>
-    <select id="var-select"></select>
-  </div>
-
-  <div id="app">
-    <section>
-      <h2>Summary</h2>
-      <div id="summary"></div>
-    </section>
-
-    <section>
-      <h2>Per-Variable Diagnostics</h2>
-      <div class="grid">
-        <div id="trace"></div>
-        <div id="hist"></div>
-        <div id="acf"></div>
-        <div id="cmean"></div>
+  <div class="shell">
+    <!-- ── Left Sidebar ── -->
+    <aside class="sidebar">
+      <div class="brand">
+        <h1>MCMCVisualizer</h1>
+        <p>Upload MCMC output or generate synthetic data to explore diagnostics.</p>
       </div>
-    </section>
 
-    <section>
-      <h2>Multi-Variable Diagnostics</h2>
-      <div class="grid">
-        <div id="forest" class="full"></div>
-        <div id="pairs" class="full"></div>
+      <div id="drop-zone" tabindex="0">
+        <div class="drop-icon">&#8693;</div>
+        <h3>Drop file here or click to browse</h3>
+        <span>Turing CSV &middot; Stan CSV &middot; MCMCChains JSON</span>
+        <input type="file" id="file-input" accept=".csv,.json,.txt">
       </div>
-    </section>
 
-    <section>
-      <h2>Export Data</h2>
-      <div class="export-bar">
-        <button data-fmt="turing">Turing CSV</button>
-        <button data-fmt="mcmcchains-csv">MCMCChains CSV</button>
-        <button data-fmt="stan">Stan CSV</button>
-        <button data-fmt="wide">Wide CSV</button>
-        <button data-fmt="json">JSON</button>
-        <button data-fmt="mcmcchains-json">MCMCChains JSON</button>
+      <div class="actions">
+        <button class="btn" id="btn-demo">&#9654; Load Demo Data</button>
+        <div class="field">
+          <label for="var-select">Variable</label>
+          <select id="var-select"><option disabled selected>Load data first</option></select>
+        </div>
       </div>
-    </section>
+      <div id="status"></div>
+
+      <div id="app-sidebar" style="display:none">
+        <div class="sidebar-label"><span class="dot"></span> Summary Statistics</div>
+        <div id="summary-wrap">
+          <div id="summary"></div>
+        </div>
+
+        <div class="sidebar-label"><span class="dot"></span> Export</div>
+        <div class="export-bar">
+          <button data-fmt="turing">Turing CSV</button>
+          <button data-fmt="mcmcchains-csv">MCMCChains CSV</button>
+          <button data-fmt="stan">Stan CSV</button>
+          <button data-fmt="wide">Wide CSV</button>
+          <button data-fmt="json">JSON</button>
+          <button data-fmt="mcmcchains-json">MCMCChains JSON</button>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">MCMCVisualizer &mdash; Built for Bayesian workflows</div>
+    </aside>
+
+    <!-- ── Right Main Content ── -->
+    <main class="main">
+      <div class="main-header">
+        <h2>Diagnostics</h2>
+        <span class="pill" id="data-info">No data loaded</span>
+      </div>
+
+      <div id="app">
+        <span class="section-label"><span class="dot"></span> Per-Variable Diagnostics</span>
+        <div class="plot-grid">
+          <div class="plot-cell" id="trace"></div>
+          <div class="plot-cell" id="hist"></div>
+          <div class="plot-cell" id="acf"></div>
+          <div class="plot-cell" id="cmean"></div>
+        </div>
+
+        <span class="section-label"><span class="dot"></span> Multi-Variable Diagnostics</span>
+        <div class="plot-grid single">
+          <div class="plot-cell tall" id="forest"></div>
+          <div class="plot-cell tall" id="pairs"></div>
+        </div>
+      </div>
+    </main>
   </div>
 
   <script type="module">
@@ -178,6 +525,12 @@
     function loadData(data) {
       currentData = data;
       appEl.style.display = 'block';
+      document.getElementById('app-sidebar').style.display = 'block';
+      document.getElementById('data-info').textContent =
+        `${data.chainNames.length} chains \u00b7 ${data.variableNames.length} vars \u00b7 ${data.drawCount} draws`;
+
+      dropZone.classList.add('compact');
+      dropZone.querySelector('h3').textContent = 'Drop or click to load another file';
 
       varSelect.innerHTML = '';
       for (const v of data.variableNames) {
@@ -190,13 +543,15 @@
       handles.length = 0;
 
       const firstVar = data.variableNames[0];
+      const plotH = 370;
+      const tallH = 450;
       handles.push(plots.summaryTable(document.getElementById('summary'), data));
-      handles.push(plots.tracePlot(document.getElementById('trace'), data, firstVar));
-      handles.push(plots.histogramPlot(document.getElementById('hist'), data, firstVar));
-      handles.push(plots.autocorrelationPlot(document.getElementById('acf'), data, firstVar));
-      handles.push(plots.cumulativeMeanPlot(document.getElementById('cmean'), data, firstVar));
-      handles.push(plots.forestPlot(document.getElementById('forest'), data));
-      handles.push(plots.pairPlot(document.getElementById('pairs'), data));
+      handles.push(plots.tracePlot(document.getElementById('trace'), data, firstVar, { height: plotH }));
+      handles.push(plots.histogramPlot(document.getElementById('hist'), data, firstVar, { height: plotH }));
+      handles.push(plots.autocorrelationPlot(document.getElementById('acf'), data, firstVar, { height: plotH }));
+      handles.push(plots.cumulativeMeanPlot(document.getElementById('cmean'), data, firstVar, { height: plotH }));
+      handles.push(plots.forestPlot(document.getElementById('forest'), data, { height: tallH }));
+      handles.push(plots.pairPlot(document.getElementById('pairs'), data, undefined, { height: tallH }));
     }
 
     function download(content, filename) {

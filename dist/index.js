@@ -807,18 +807,18 @@ var CHAIN_COLORS = [
   "#FF6692",
   "#B6E880"
 ];
-var FONT = "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+var FONT = "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 function darkLayout(opts) {
   return {
-    paper_bgcolor: "#0f1117",
-    plot_bgcolor: "#1a1d27",
-    font: { color: "#e0e0e0", family: FONT, size: 12 },
-    xaxis: { gridcolor: "#252836", zerolinecolor: "#444", linecolor: "#333" },
-    yaxis: { gridcolor: "#252836", zerolinecolor: "#444", linecolor: "#333" },
+    paper_bgcolor: "#181b26",
+    plot_bgcolor: "#13151e",
+    font: { color: "#eaedf3", family: FONT, size: 12 },
+    xaxis: { gridcolor: "#262a3a", zerolinecolor: "#3a3f52", linecolor: "#2f3447" },
+    yaxis: { gridcolor: "#262a3a", zerolinecolor: "#3a3f52", linecolor: "#2f3447" },
     margin: { t: 40, r: 20, b: 50, l: 60 },
     height: opts?.height,
     width: opts?.width,
-    hoverlabel: { bgcolor: "#252836", bordercolor: "#555", font: { color: "#e0e0e0" } }
+    hoverlabel: { bgcolor: "#1e2130", bordercolor: "#3a3f52", font: { color: "#eaedf3" } }
   };
 }
 function lightLayout(opts) {
