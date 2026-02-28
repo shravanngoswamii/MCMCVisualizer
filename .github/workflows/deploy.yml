@@ -1,0 +1,44 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build package
+        run: npm run build
+
+      - name: Prepare deploy directory
+        run: |
+          mkdir -p deploy/dist
+          cp dist/index.js dist/index.js.map deploy/dist/
+          cp dist/index.cjs dist/index.cjs.map deploy/dist/
+          cp dist/index.d.ts dist/index.d.cts deploy/dist/
+          cp examples/demo/index.html deploy/index.html
+          sed -i "s|../../dist/index.js|./dist/index.js|g" deploy/index.html
+
+      - name: Deploy to gh-pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: ./deploy
+          clean-exclude: pr-previews
+          commit-message: Deploy MCMCVisualizer demo and package

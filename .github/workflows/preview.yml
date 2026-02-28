@@ -1,0 +1,85 @@
+name: PR Preview
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, closed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  build-and-preview:
+    if: github.event.action == 'opened' || github.event.action == 'synchronize'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build package
+        run: npm run build
+
+      - name: Prepare deploy directory
+        run: |
+          mkdir -p deploy/dist
+          cp dist/index.js dist/index.js.map deploy/dist/
+          cp dist/index.cjs dist/index.cjs.map deploy/dist/
+          cp dist/index.d.ts dist/index.d.cts deploy/dist/
+          cp examples/demo/index.html deploy/index.html
+          sed -i "s|../../dist/index.js|./dist/index.js|g" deploy/index.html
+
+      - name: Deploy preview
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: ./deploy
+          target-folder: pr-previews/${{ github.event.pull_request.number }}
+          clean: false
+          commit-message: Deploy preview for PR ${{ github.event.pull_request.number }}
+
+      - name: Comment preview URL
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          message: |
+            <!-- preview-url-comment -->
+            Preview the changes: https://shravanngoswamii.github.io/MCMCVisualizer/pr-previews/${{ github.event.pull_request.number }}
+          comment_tag: preview-url-comment
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  delete-preview:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Remove PR preview directory
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          PREVIEW_DIR="pr-previews/${PR_NUMBER}"
+          if [ -d "${PREVIEW_DIR}" ]; then
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git pull origin gh-pages
+            rm -rf "${PREVIEW_DIR}"
+            git add .
+            git diff --staged --quiet || git commit -m "Remove preview for PR #${PR_NUMBER}"
+            git push
+          else
+            echo "Preview directory ${PREVIEW_DIR} not found, skipping."
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
