@@ -1,0 +1,54 @@
+{
+  "name": "mcmc-visualizer",
+  "version": "0.1.0",
+  "description": "Parse, analyze, plot, and export MCMC sampling data. Supports Turing CSV, Stan CSV formats with built-in diagnostics (ESS, R-hat, HDI) and interactive Plotly.js visualizations.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcmc",
+    "bayesian",
+    "statistics",
+    "turing",
+    "stan",
+    "arviz",
+    "ess",
+    "rhat",
+    "diagnostics",
+    "sampling",
+    "plotly",
+    "visualization"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "plotly.js-dist-min": ">=2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "plotly.js-dist-min": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^2.0.0"
+  }
+}

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MCMCVisualizer Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0f1117; color: #e0e0e0; margin: 0; padding: 0; }
+
+    header { padding: 20px 32px 0; }
+    header h1 { font-size: 1.4rem; margin: 0 0 2px; }
+    header p { color: #666; font-size: 0.82rem; margin: 0; }
+
+    .toolbar { display: flex; align-items: center; gap: 12px; padding: 16px 32px; flex-wrap: wrap; }
+    .toolbar label { font-size: 0.78rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+    .toolbar select, .toolbar button {
+      background: #1a1d27; color: #e0e0e0; border: 1px solid #333; border-radius: 6px;
+      padding: 6px 14px; font-size: 0.82rem; cursor: pointer; transition: border-color 0.15s;
+    }
+    .toolbar select:hover, .toolbar button:hover { border-color: #555; }
+    .toolbar button.primary { background: #2563eb; border-color: #2563eb; color: #fff; font-weight: 500; }
+    .toolbar button.primary:hover { background: #1d4ed8; }
+    .toolbar .sep { width: 1px; height: 24px; background: #333; }
+
+    #drop-zone {
+      margin: 0 32px 16px; border: 2px dashed #333; border-radius: 10px;
+      padding: 36px 20px; text-align: center; transition: border-color 0.2s, background 0.2s; cursor: pointer;
+    }
+    #drop-zone.hover { border-color: #2563eb; background: rgba(37,99,235,0.06); }
+    #drop-zone h3 { margin: 0 0 4px; font-size: 0.95rem; color: #aaa; font-weight: 500; }
+    #drop-zone span { font-size: 0.78rem; color: #555; }
+    #file-input { display: none; }
+
+    #status { padding: 0 32px; font-size: 0.78rem; color: #22c55e; min-height: 1.2em; }
+    #status.err { color: #ef4444; }
+
+    section { padding: 0 32px; }
+    section h2 { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: #444; margin: 20px 0 8px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .full { grid-column: 1 / -1; }
+
+    #app { display: none; }
+
+    .export-bar { display: flex; gap: 8px; flex-wrap: wrap; padding: 4px 0 24px; }
+    .export-bar button {
+      background: #1a1d27; color: #ccc; border: 1px solid #333; border-radius: 6px;
+      padding: 5px 12px; font-size: 0.75rem; cursor: pointer; transition: border-color 0.15s;
+    }
+    .export-bar button:hover { border-color: #555; color: #fff; }
+
+    @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>MCMCVisualizer</h1>
+    <p>Upload MCMC data (CSV or JSON) &mdash; or use the synthetic demo data to explore.</p>
+  </header>
+
+  <div id="drop-zone" tabindex="0">
+    <h3>Drop MCMC file here or click to browse</h3>
+    <span>Supports: Turing CSV, MCMCChains CSV, Stan CSV, MCMCChains JSON</span>
+    <input type="file" id="file-input" accept=".csv,.json,.txt">
+  </div>
+  <div id="status"></div>
+
+  <div class="toolbar">
+    <button class="primary" id="btn-demo">Load Demo Data</button>
+    <div class="sep"></div>
+    <label for="var-select">Variable</label>
+    <select id="var-select"></select>
+  </div>
+
+  <div id="app">
+    <section>
+      <h2>Summary</h2>
+      <div id="summary"></div>
+    </section>
+
+    <section>
+      <h2>Per-Variable Diagnostics</h2>
+      <div class="grid">
+        <div id="trace"></div>
+        <div id="hist"></div>
+        <div id="acf"></div>
+        <div id="cmean"></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Multi-Variable Diagnostics</h2>
+      <div class="grid">
+        <div id="forest" class="full"></div>
+        <div id="pairs" class="full"></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Export Data</h2>
+      <div class="export-bar">
+        <button data-fmt="turing">Turing CSV</button>
+        <button data-fmt="mcmcchains-csv">MCMCChains CSV</button>
+        <button data-fmt="stan">Stan CSV</button>
+        <button data-fmt="wide">Wide CSV</button>
+        <button data-fmt="json">JSON</button>
+        <button data-fmt="mcmcchains-json">MCMCChains JSON</button>
+      </div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { fromChainArrays, fromAutoDetect, detectFormat, plots } from '../../dist/index.js';
+
+    let currentData = null;
+    const handles = [];
+
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const statusEl = document.getElementById('status');
+    const appEl = document.getElementById('app');
+    const varSelect = document.getElementById('var-select');
+
+    function status(msg, isErr) {
+      statusEl.textContent = msg;
+      statusEl.className = isErr ? 'err' : '';
+    }
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('hover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('hover'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('hover');
+      const file = e.dataTransfer.files[0];
+      if (file) readFile(file);
+    });
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) readFile(fileInput.files[0]);
+    });
+
+    function readFile(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const text = reader.result;
+          const fmt = detectFormat(text);
+          const data = fromAutoDetect(text);
+          status(`Loaded ${file.name} (${fmt}, ${data.chainNames.length} chains, ${data.variableNames.length} vars, ${data.drawCount} draws)`);
+          loadData(data);
+        } catch (err) {
+          status(`Error: ${err.message}`, true);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    document.getElementById('btn-demo').addEventListener('click', () => {
+      function rng(s) { return () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; }; }
+      function norm(r) { return () => { let u = 0, v = 0; while (!u) u = r(); while (!v) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }; }
+      function walk(n, start, scale, seed) { const g = norm(rng(seed)); const a = [start]; for (let i = 1; i < n; i++) a.push(a[i - 1] + g() * scale); return a; }
+
+      const data = fromChainArrays({
+        'chain 1': { mu: walk(2000, 0, 0.15, 42), sigma: walk(2000, 1, 0.05, 123).map(Math.abs), beta: walk(2000, -2, 0.2, 777) },
+        'chain 2': { mu: walk(2000, 0.1, 0.15, 99), sigma: walk(2000, 1.05, 0.05, 456).map(Math.abs), beta: walk(2000, -1.9, 0.2, 888) },
+        'chain 3': { mu: walk(2000, -0.05, 0.15, 200), sigma: walk(2000, 0.95, 0.05, 300).map(Math.abs), beta: walk(2000, -2.1, 0.2, 400) },
+      });
+      status('Loaded synthetic demo data (3 chains, 3 vars, 2000 draws)');
+      loadData(data);
+    });
+
+    varSelect.addEventListener('change', () => {
+      const v = varSelect.value;
+      for (const h of handles) h.update(v);
+    });
+
+    function loadData(data) {
+      currentData = data;
+      appEl.style.display = 'block';
+
+      varSelect.innerHTML = '';
+      for (const v of data.variableNames) {
+        const opt = document.createElement('option');
+        opt.value = v; opt.textContent = v;
+        varSelect.appendChild(opt);
+      }
+
+      for (const h of handles) h.destroy();
+      handles.length = 0;
+
+      const firstVar = data.variableNames[0];
+      handles.push(plots.summaryTable(document.getElementById('summary'), data));
+      handles.push(plots.tracePlot(document.getElementById('trace'), data, firstVar));
+      handles.push(plots.histogramPlot(document.getElementById('hist'), data, firstVar));
+      handles.push(plots.autocorrelationPlot(document.getElementById('acf'), data, firstVar));
+      handles.push(plots.cumulativeMeanPlot(document.getElementById('cmean'), data, firstVar));
+      handles.push(plots.forestPlot(document.getElementById('forest'), data));
+      handles.push(plots.pairPlot(document.getElementById('pairs'), data));
+    }
+
+    function download(content, filename) {
+      const blob = new Blob([content], { type: 'text/plain' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    for (const btn of document.querySelectorAll('.export-bar button')) {
+      btn.addEventListener('click', () => {
+        if (!currentData) return;
+        const fmt = btn.dataset.fmt;
+        const exports = {
+          'turing':           () => download(currentData.toTuringCSV(), 'mcmc_turing.csv'),
+          'mcmcchains-csv':   () => download(currentData.toMCMCChainsCSV(), 'mcmc_chains.csv'),
+          'stan':             () => download(currentData.toStanCSV(), 'mcmc_stan.csv'),
+          'wide':             () => download(currentData.toWideCSV(), 'mcmc_wide.csv'),
+          'json':             () => download(currentData.toJSON(), 'mcmc_data.json'),
+          'mcmcchains-json':  () => download(currentData.toMCMCChainsJSON(), 'mcmc_chains.json'),
+        };
+        exports[fmt]?.();
+        status(`Exported as ${fmt}`);
+      });
+    }
+  </script>
+</body>
+</html>
