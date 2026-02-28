@@ -43,14 +43,13 @@
       overflow: hidden;
     }
 
-    * {
-      scrollbar-width: thin;
-      scrollbar-color: rgba(99,102,241,0.18) transparent;
-    }
     *::-webkit-scrollbar { width: 5px; height: 5px; }
     *::-webkit-scrollbar-track { background: transparent; }
     *::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.18); border-radius: 4px; }
     *::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.32); }
+    @supports (scrollbar-width: thin) {
+      * { scrollbar-width: thin; scrollbar-color: rgba(99,102,241,0.18) transparent; }
+    }
 
     /* ── Two-panel shell ── */
     .shell {
@@ -228,9 +227,11 @@
       flex: 1;
       overflow-y: auto;
       margin-top: 4px;
-      scrollbar-width: none;
     }
     #summary-wrap::-webkit-scrollbar { display: none; }
+    @supports (scrollbar-width: none) {
+      #summary-wrap { scrollbar-width: none; }
+    }
     #summary-wrap #summary { font-size: 0.78rem; }
     #summary-wrap table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
     #summary-wrap th, #summary-wrap td { padding: 5px 6px; text-align: left; border-bottom: 1px solid var(--border); }
@@ -346,6 +347,7 @@
     .plot-cell.tall { min-height: 460px; }
 
     #app { display: none; }
+    .hidden { display: none; }
 
     /* ── Responsive: iPad landscape / small desktop ── */
     @media (max-width: 1100px) {
@@ -412,7 +414,7 @@
       </div>
       <div id="status"></div>
 
-      <div id="app-sidebar" style="display:none">
+      <div id="app-sidebar" class="hidden">
         <div class="sidebar-label"><span class="dot"></span> Summary Statistics</div>
         <div id="summary-wrap">
           <div id="summary"></div>
@@ -525,7 +527,7 @@
     function loadData(data) {
       currentData = data;
       appEl.style.display = 'block';
-      document.getElementById('app-sidebar').style.display = 'block';
+      document.getElementById('app-sidebar').classList.remove('hidden');
       document.getElementById('data-info').textContent =
         `${data.chainNames.length} chains \u00b7 ${data.variableNames.length} vars \u00b7 ${data.drawCount} draws`;
 
