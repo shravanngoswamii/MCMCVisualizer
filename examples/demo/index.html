@@ -448,12 +448,17 @@
           <div class="plot-cell" id="hist"></div>
           <div class="plot-cell" id="acf"></div>
           <div class="plot-cell" id="cmean"></div>
+          <div class="plot-cell" id="density"></div>
+          <div class="plot-cell" id="rank"></div>
+          <div class="plot-cell" id="running-rhat"></div>
         </div>
 
         <span class="section-label"><span class="dot"></span> Multi-Variable Diagnostics</span>
         <div class="plot-grid single">
           <div class="plot-cell tall" id="forest"></div>
+          <div class="plot-cell tall" id="violin"></div>
           <div class="plot-cell tall" id="pairs"></div>
+          <div class="plot-cell tall" id="energy"></div>
         </div>
       </div>
     </main>
@@ -552,8 +557,13 @@
       handles.push(plots.histogramPlot(document.getElementById('hist'), data, firstVar, { height: plotH }));
       handles.push(plots.autocorrelationPlot(document.getElementById('acf'), data, firstVar, { height: plotH }));
       handles.push(plots.cumulativeMeanPlot(document.getElementById('cmean'), data, firstVar, { height: plotH }));
+      handles.push(plots.densityPlot(document.getElementById('density'), data, firstVar, { height: plotH }));
+      handles.push(plots.rankPlot(document.getElementById('rank'), data, firstVar, { height: plotH }));
+      handles.push(plots.runningRhatPlot(document.getElementById('running-rhat'), data, firstVar, { height: plotH }));
       handles.push(plots.forestPlot(document.getElementById('forest'), data, { height: tallH }));
+      handles.push(plots.violinPlot(document.getElementById('violin'), data, { height: tallH }));
       handles.push(plots.pairPlot(document.getElementById('pairs'), data, undefined, { height: tallH }));
+      handles.push(plots.energyPlot(document.getElementById('energy'), data, { height: tallH }));
     }
 
     function download(content, filename) {

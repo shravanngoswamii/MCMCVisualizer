@@ -10,6 +10,9 @@ export { MCMCData } from './inference-data';
 export { computeESS } from './stats/ess';
 export { computeRhat } from './stats/rhat';
 export { computeMean, computeStdev, computeQuantiles, computeHDI } from './stats/summary';
+export { computeMCSE, computeBulkESS, computeTailESS } from './stats/mcse';
+export { computeGeweke } from './stats/geweke';
+export { computeSplitRhat } from './stats/split-rhat';
 export { detectFormat } from './parsers/detect';
 
 export * as plots from './plots';
