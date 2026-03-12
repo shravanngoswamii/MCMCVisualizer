@@ -41,11 +41,11 @@ const allDraws = data.getAllDraws('alpha'); // Float64Array
 
 // Compute full summary table
 const summary = data.summary();
-// [{ variable: 'alpha', mean, stdev, ess, rhat, quantiles, hdi90, count }, ...]
+// [{ variable, mean, stdev, mcse, ess, bulkEss, tailEss, rhat, splitRhat, geweke, quantiles, hdi90, ... }, ...]
 
 // Per-chain stats
 const seqStats = data.sequenceStats('alpha', 'chain#1');
-// { mean, stdev, ess, autocorrelation, count }
+// { mean, stdev, ess, essPerDraw, mcse, skewness, excessKurtosis, autocorrelation, count }
 ```
 
 ## Diagnostics
@@ -53,9 +53,14 @@ const seqStats = data.sequenceStats('alpha', 'chain#1');
 Built-in MCMC diagnostics with no dependencies:
 
 - **ESS** (Effective Sample Size) via FFT-based autocorrelation
+- **Bulk ESS / Tail ESS** for robust convergence checks
 - **R-hat** (Gelman-Rubin convergence diagnostic)
+- **Split R-hat** for split-chain convergence checks
+- **MCSE** (Monte Carlo standard error)
+- **Geweke z-score / p-value**
 - **Autocorrelation** at all lags
 - **HDI** (Highest Density Interval)
+- **Skewness / Excess Kurtosis**
 - **Quantiles** (5%, 25%, 50%, 75%, 95%)
 
 ```typescript
@@ -64,6 +69,8 @@ import { computeESS, computeRhat, computeHDI } from 'mcmc-visualizer';
 const { ess, autocorrelation } = computeESS(new Float64Array([...]));
 const rhat = computeRhat(chainMeans, chainStdevs, chainCounts);
 const [lo, hi] = computeHDI(new Float64Array([...]), 0.9);
+const mcse = computeMCSE(new Float64Array([...]));
+const shape = computeSkewness(new Float64Array([...]));
 ```
 
 ## Export
@@ -161,8 +168,15 @@ Works directly in the browser with any bundler or via CDN:
 |----------|-------------|
 | `computeESS(chain)` | FFT-based effective sample size |
 | `computeRhat(means, stdevs, counts)` | Gelman-Rubin R-hat |
+| `computeMCSE(chain)` | Monte Carlo standard error |
+| `computeBulkESS(chains)` | Rank-normalized bulk ESS |
+| `computeTailESS(chains)` | Tail ESS |
+| `computeGeweke(chain)` | Geweke z-score and p-value |
+| `computeSplitRhat(chains)` | Split-chain R-hat |
 | `computeMean(arr)` | Arithmetic mean |
 | `computeStdev(arr)` | Standard deviation |
+| `computeSkewness(arr)` | Standardized third moment |
+| `computeExcessKurtosis(arr)` | Standardized fourth moment minus 3 |
 | `computeQuantiles(arr)` | 5/25/50/75/95th percentiles |
 | `computeHDI(arr, mass?)` | Highest density interval |
 | `detectFormat(text)` | Detect file format |

@@ -1,8 +1,5 @@
 import type { InferenceData } from '../types';
 import type { PlotOptions } from './types';
-import { computeMCSE, computeBulkESS, computeTailESS } from '../stats/mcse';
-import { computeGeweke } from '../stats/geweke';
-import { computeSplitRhat } from '../stats/split-rhat';
 
 export function summaryTable(
   container: HTMLElement,
@@ -36,40 +33,30 @@ export function summaryTable(
     }
     html += '</tr></thead><tbody>';
 
-    const chainNames = data.chainNames;
     for (const s of summaries) {
-      const allDraws = data.getAllDraws(s.variable);
-      const chains = chainNames.map(c => data.getDraws(s.variable, c));
-
-      const mcse = computeMCSE(allDraws);
-      const bulkEss = computeBulkESS(chains);
-      const tailEss = computeTailESS(chains);
-      const splitRhat = computeSplitRhat(chains);
-      const geweke = computeGeweke(allDraws);
-
       const rhatColor = s.rhat === undefined ? mutedColor : s.rhat < 1.05 ? '#22c55e' : s.rhat < 1.1 ? '#eab308' : '#ef4444';
-      const splitRhatColor = splitRhat === undefined ? mutedColor : splitRhat < 1.05 ? '#22c55e' : splitRhat < 1.1 ? '#eab308' : '#ef4444';
+      const splitRhatColor = s.splitRhat === undefined ? mutedColor : s.splitRhat < 1.05 ? '#22c55e' : s.splitRhat < 1.1 ? '#eab308' : '#ef4444';
       const essColor = s.ess > 400 ? '#22c55e' : s.ess > 100 ? '#eab308' : '#ef4444';
-      const bulkEssColor = bulkEss > 400 ? '#22c55e' : bulkEss > 100 ? '#eab308' : '#ef4444';
-      const tailEssColor = tailEss > 400 ? '#22c55e' : tailEss > 100 ? '#eab308' : '#ef4444';
-      const gewekeColor = isNaN(geweke.z) ? mutedColor : Math.abs(geweke.z) < 1.96 ? '#22c55e' : Math.abs(geweke.z) < 2.58 ? '#eab308' : '#ef4444';
+      const bulkEssColor = s.bulkEss > 400 ? '#22c55e' : s.bulkEss > 100 ? '#eab308' : '#ef4444';
+      const tailEssColor = s.tailEss > 400 ? '#22c55e' : s.tailEss > 100 ? '#eab308' : '#ef4444';
+      const gewekeColor = isNaN(s.geweke.z) ? mutedColor : Math.abs(s.geweke.z) < 1.96 ? '#22c55e' : Math.abs(s.geweke.z) < 2.58 ? '#eab308' : '#ef4444';
 
       html += `<tr style="border-bottom:1px solid ${borderColor}">`;
       html += `<td style="padding:8px 14px;font-weight:600">${s.variable}</td>`;
       html += td(s.mean, textColor);
       html += td(s.stdev, textColor);
-      html += td(mcse, textColor);
+      html += td(s.mcse, textColor);
       html += td(s.quantiles.q5, textColor);
       html += td(s.quantiles.q25, textColor);
       html += td(s.quantiles.q50, textColor);
       html += td(s.quantiles.q75, textColor);
       html += td(s.quantiles.q95, textColor);
       html += `<td style="padding:8px 14px;color:${essColor};font-variant-numeric:tabular-nums">${Math.round(s.ess)}</td>`;
-      html += `<td style="padding:8px 14px;color:${bulkEssColor};font-variant-numeric:tabular-nums">${Math.round(bulkEss)}</td>`;
-      html += `<td style="padding:8px 14px;color:${tailEssColor};font-variant-numeric:tabular-nums">${Math.round(tailEss)}</td>`;
+      html += `<td style="padding:8px 14px;color:${bulkEssColor};font-variant-numeric:tabular-nums">${Math.round(s.bulkEss)}</td>`;
+      html += `<td style="padding:8px 14px;color:${tailEssColor};font-variant-numeric:tabular-nums">${Math.round(s.tailEss)}</td>`;
       html += `<td style="padding:8px 14px;color:${rhatColor};font-variant-numeric:tabular-nums">${s.rhat !== undefined ? s.rhat.toFixed(3) : '\u2014'}</td>`;
-      html += `<td style="padding:8px 14px;color:${splitRhatColor};font-variant-numeric:tabular-nums">${splitRhat !== undefined ? splitRhat.toFixed(3) : '\u2014'}</td>`;
-      html += `<td style="padding:8px 14px;color:${gewekeColor};font-variant-numeric:tabular-nums">${!isNaN(geweke.z) ? geweke.z.toFixed(3) : '\u2014'}</td>`;
+      html += `<td style="padding:8px 14px;color:${splitRhatColor};font-variant-numeric:tabular-nums">${s.splitRhat !== undefined ? s.splitRhat.toFixed(3) : '\u2014'}</td>`;
+      html += `<td style="padding:8px 14px;color:${gewekeColor};font-variant-numeric:tabular-nums">${!isNaN(s.geweke.z) ? s.geweke.z.toFixed(3) : '\u2014'}</td>`;
       html += `<td style="padding:8px 14px;font-variant-numeric:tabular-nums;white-space:nowrap">[${s.hdi90[0].toFixed(3)}, ${s.hdi90[1].toFixed(3)}]</td>`;
       html += '</tr>';
     }

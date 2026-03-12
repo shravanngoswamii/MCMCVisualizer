@@ -9,7 +9,14 @@ export type { InferenceData, ChainData, SequenceStats, VariableStats, VariableSu
 export { MCMCData } from './inference-data';
 export { computeESS } from './stats/ess';
 export { computeRhat } from './stats/rhat';
-export { computeMean, computeStdev, computeQuantiles, computeHDI } from './stats/summary';
+export {
+  computeMean,
+  computeStdev,
+  computeQuantiles,
+  computeHDI,
+  computeSkewness,
+  computeExcessKurtosis,
+} from './stats/summary';
 export { computeMCSE, computeBulkESS, computeTailESS } from './stats/mcse';
 export { computeGeweke } from './stats/geweke';
 export { computeSplitRhat } from './stats/split-rhat';

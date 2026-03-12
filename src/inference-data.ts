@@ -7,7 +7,17 @@ import type {
 } from './types';
 import { computeESS } from './stats/ess';
 import { computeRhat } from './stats/rhat';
-import { computeMean, computeStdev, computeQuantiles, computeHDI } from './stats/summary';
+import {
+  computeMean,
+  computeStdev,
+  computeQuantiles,
+  computeHDI,
+  computeSkewness,
+  computeExcessKurtosis,
+} from './stats/summary';
+import { computeMCSE, computeBulkESS, computeTailESS } from './stats/mcse';
+import { computeGeweke } from './stats/geweke';
+import { computeSplitRhat } from './stats/split-rhat';
 import { toTuringCSV, toMCMCChainsCSV, toStanCSV, toWideCSV, toJSON, toMCMCChainsJSON } from './exporters';
 
 export class MCMCData implements InferenceData {
@@ -65,7 +75,17 @@ export class MCMCData implements InferenceData {
     const mean = computeMean(draws);
     const stdev = computeStdev(draws);
     const { ess, autocorrelation } = computeESS(draws);
-    return { mean, stdev, count: draws.length, ess, autocorrelation };
+    return {
+      mean,
+      stdev,
+      count: draws.length,
+      ess,
+      essPerDraw: draws.length > 0 ? ess / draws.length : NaN,
+      mcse: computeMCSE(draws),
+      skewness: computeSkewness(draws),
+      excessKurtosis: computeExcessKurtosis(draws),
+      autocorrelation,
+    };
   }
 
   variableStats(variable: string): VariableStats {
@@ -73,6 +93,7 @@ export class MCMCData implements InferenceData {
     const chainStdevs: number[] = [];
     const chainCounts: number[] = [];
     let totalESS = 0;
+    const chainDraws: Float64Array[] = [];
 
     for (const chainName of this.chainNames) {
       const chain = this.chains.get(chainName)!;
@@ -85,6 +106,7 @@ export class MCMCData implements InferenceData {
       chainMeans.push(m);
       chainStdevs.push(isNaN(s) ? 0 : s);
       chainCounts.push(draws.length);
+      chainDraws.push(draws);
       totalESS += ess;
     }
 
@@ -92,15 +114,29 @@ export class MCMCData implements InferenceData {
     const quantiles = computeQuantiles(allDraws);
     const hdi90 = computeHDI(allDraws, 0.9);
     const rhat = computeRhat(chainMeans, chainStdevs, chainCounts);
+    const mcse = computeMCSE(allDraws);
+    const bulkEss = computeBulkESS(chainDraws);
+    const tailEss = computeTailESS(chainDraws);
+    const splitRhat = computeSplitRhat(chainDraws);
+    const geweke = computeGeweke(allDraws);
 
     return {
       mean: computeMean(allDraws),
       stdev: computeStdev(allDraws),
       count: allDraws.length,
       ess: totalESS,
+      essPerDraw: allDraws.length > 0 ? totalESS / allDraws.length : NaN,
+      mcse,
+      bulkEss,
+      tailEss,
       rhat,
+      splitRhat,
+      geweke,
+      skewness: computeSkewness(allDraws),
+      excessKurtosis: computeExcessKurtosis(allDraws),
       quantiles,
       hdi90,
+      hdi90Width: hdi90[1] - hdi90[0],
     };
   }
 

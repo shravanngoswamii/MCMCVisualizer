@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { computeMean, computeStdev, computeQuantiles, computeHDI } from '../../src/index';
+import {
+  computeMean,
+  computeStdev,
+  computeQuantiles,
+  computeHDI,
+  computeSkewness,
+  computeExcessKurtosis,
+} from '../../src/index';
 
 describe('summary stats', () => {
   const data = new Float64Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
@@ -28,5 +35,11 @@ describe('summary stats', () => {
   it('handles empty arrays', () => {
     expect(computeMean(new Float64Array([]))).toBeNaN();
     expect(computeStdev(new Float64Array([]))).toBeNaN();
+  });
+
+  it('computes shape diagnostics', () => {
+    const symmetric = new Float64Array([-2, -1, 0, 1, 2]);
+    expect(computeSkewness(symmetric)).toBeCloseTo(0, 5);
+    expect(computeExcessKurtosis(symmetric)).toBeLessThan(0);
   });
 });

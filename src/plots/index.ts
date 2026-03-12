@@ -10,5 +10,8 @@ export { runningRhatPlot } from './running-rhat';
 export { densityPlot } from './density';
 export { violinPlot } from './violin';
 export { energyPlot } from './energy';
+export { ecdfPlot } from './ecdf';
+export { chainIntervalsPlot } from './chain-intervals';
+export { diagnosticsHeatmapPlot } from './diagnostics-heatmap';
 
 export type { PlotOptions, PlotHandle } from './types';

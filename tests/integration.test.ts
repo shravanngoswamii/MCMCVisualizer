@@ -36,6 +36,12 @@ describe('InferenceData integration', () => {
     expect(muSummary!.count).toBe(10);
     expect(muSummary!.quantiles.q50).toBeDefined();
     expect(muSummary!.hdi90).toBeDefined();
+    expect(muSummary!.mcse).toBeGreaterThanOrEqual(0);
+    expect(muSummary!.bulkEss).toBeGreaterThanOrEqual(0);
+    expect(muSummary!.tailEss).toBeGreaterThanOrEqual(0);
+    expect(muSummary!.essPerDraw).toBeGreaterThanOrEqual(0);
+    expect(muSummary!.hdi90Width).toBeGreaterThan(0);
+    expect(muSummary!.geweke.z).toBeTypeOf('number');
   });
 
   it('exports to Turing CSV round-trip', () => {
@@ -106,6 +112,8 @@ describe('InferenceData integration', () => {
     expect(stats.mean).toBeCloseTo(1.92, 1);
     expect(stats.count).toBe(5);
     expect(stats.ess).toBeGreaterThanOrEqual(0);
+    expect(stats.mcse).toBeGreaterThanOrEqual(0);
+    expect(stats.essPerDraw).toBeGreaterThanOrEqual(0);
   });
 
   it('exports to MCMCChains CSV round-trip', () => {

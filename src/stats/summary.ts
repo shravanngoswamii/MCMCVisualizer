@@ -15,6 +15,34 @@ export function computeStdev(arr: Float64Array): number {
   return Math.sqrt(sumsq / arr.length - m * m);
 }
 
+export function computeSkewness(arr: Float64Array): number {
+  if (arr.length < 3) return NaN;
+  const mean = computeMean(arr);
+  const sd = computeStdev(arr);
+  if (!isFinite(sd) || sd === 0) return 0;
+
+  let thirdMoment = 0;
+  for (let i = 0; i < arr.length; i++) {
+    thirdMoment += (arr[i]! - mean) ** 3;
+  }
+
+  return (thirdMoment / arr.length) / (sd ** 3);
+}
+
+export function computeExcessKurtosis(arr: Float64Array): number {
+  if (arr.length < 4) return NaN;
+  const mean = computeMean(arr);
+  const sd = computeStdev(arr);
+  if (!isFinite(sd) || sd === 0) return 0;
+
+  let fourthMoment = 0;
+  for (let i = 0; i < arr.length; i++) {
+    fourthMoment += (arr[i]! - mean) ** 4;
+  }
+
+  return (fourthMoment / arr.length) / (sd ** 4) - 3;
+}
+
 export function computeQuantiles(arr: Float64Array) {
   const sorted = sortedCopy(arr);
   return {

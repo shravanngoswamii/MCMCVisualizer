@@ -9,6 +9,10 @@ export interface SequenceStats {
   stdev: number;
   count: number;
   ess: number;
+  essPerDraw: number;
+  mcse: number;
+  skewness: number;
+  excessKurtosis: number;
   autocorrelation: number[];
 }
 
@@ -17,7 +21,18 @@ export interface VariableStats {
   stdev: number;
   count: number;
   ess: number;
+  essPerDraw: number;
+  mcse: number;
+  bulkEss: number;
+  tailEss: number;
   rhat: number | undefined;
+  splitRhat: number | undefined;
+  geweke: {
+    z: number;
+    pValue: number;
+  };
+  skewness: number;
+  excessKurtosis: number;
   quantiles: {
     q5: number;
     q25: number;
@@ -26,6 +41,7 @@ export interface VariableStats {
     q95: number;
   };
   hdi90: [number, number];
+  hdi90Width: number;
 }
 
 export interface VariableSummary extends VariableStats {
