@@ -7,456 +7,501 @@
   <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:wght@500;600&display=swap" rel="stylesheet">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; }
 
     :root {
-      --sidebar-w: 360px;
-      --bg-primary: #0c0e14;
-      --bg-secondary: #13151e;
-      --bg-sidebar: #111320;
-      --bg-card: #181b26;
-      --border: #262a3a;
-      --border-light: #2f3447;
-      --text-primary: #eaedf3;
-      --text-secondary: #9399ab;
-      --text-muted: #5c6278;
-      --accent: #6366f1;
-      --accent-hover: #818cf8;
-      --accent-subtle: rgba(99, 102, 241, 0.08);
-      --success: #34d399;
-      --error: #f87171;
+      --bg: #f4f1ea;
+      --paper: #ffffff;
+      --paper-muted: #fbfaf7;
+      --border: #d8d2c6;
+      --text: #1f2933;
+      --muted: #637180;
+      --accent: #244b72;
+      --accent-soft: #e9eff5;
+      --success: #2f6f4f;
+      --danger: #a23c3c;
       --radius: 12px;
-      --radius-sm: 8px;
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
-      --shadow-md: 0 4px 14px rgba(0,0,0,0.35);
-      --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      --sans: 'IBM Plex Sans', system-ui, sans-serif;
+      --serif: 'Source Serif 4', Georgia, serif;
     }
 
-    body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      line-height: 1.6;
-      height: 100vh;
-      overflow: hidden;
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
     }
 
-    *::-webkit-scrollbar { width: 5px; height: 5px; }
-    *::-webkit-scrollbar-track { background: transparent; }
-    *::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.18); border-radius: 4px; }
-    *::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.32); }
-    @supports (scrollbar-width: thin) {
-      * { scrollbar-width: thin; scrollbar-color: rgba(99,102,241,0.18) transparent; }
-    }
+    button, select, input { font: inherit; }
 
-    /* ── Two-panel shell ── */
-    .shell {
-      display: grid;
-      grid-template-columns: var(--sidebar-w) 1fr;
-      height: 100vh;
-      overflow: hidden;
-    }
-
-    /* ── Left sidebar ── */
-    .sidebar {
-      background: var(--bg-sidebar);
-      border-right: 1px solid var(--border);
-      padding: 32px 24px;
+    .page {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 20px;
       display: flex;
       flex-direction: column;
-      gap: 0;
-      overflow-y: auto;
-      position: sticky;
-      top: 0;
-      height: 100vh;
+      gap: 16px;
     }
 
-    .brand {
-      margin-bottom: 28px;
-      flex-shrink: 0;
+    .panel {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
     }
-    .brand h1 {
-      font-size: 1.35rem;
-      font-weight: 700;
+
+    .masthead {
+      display: grid;
+      grid-template-columns: minmax(0, 1.7fr) minmax(260px, 0.9fr);
+      gap: 16px;
+      padding: 20px 22px;
+    }
+
+    .eyebrow {
+      font-size: 0.76rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    h1, h2, h3 {
+      font-family: var(--serif);
+      font-weight: 600;
       letter-spacing: -0.02em;
-      margin-bottom: 4px;
-      background: linear-gradient(135deg, #eaedf3, #9399ab);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
     }
-    .brand p {
-      color: var(--text-muted);
+
+    .masthead h1 {
+      margin: 0 0 10px;
+      font-size: clamp(1.8rem, 3vw, 2.4rem);
+      line-height: 1.05;
+    }
+
+    .masthead p,
+    .section-copy,
+    .status-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .status-card {
+      padding: 16px 18px;
+      background: var(--paper-muted);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .status-card strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 1.35rem;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .controls {
+      padding: 18px;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.9fr) minmax(260px, 0.9fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .control-block {
+      padding: 16px;
+      background: var(--paper-muted);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    .control-block h2,
+    .summary-panel h2,
+    .variable-panel h2 {
+      margin: 0 0 6px;
+      font-size: 1.15rem;
+    }
+
+    .control-block p,
+    .summary-panel p,
+    .variable-panel p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 0.92rem;
+    }
+
+    #drop-zone {
+      margin-top: 12px;
+      padding: 18px;
+      border: 1px dashed #9aa9b7;
+      border-radius: 10px;
+      background: #fff;
+      cursor: pointer;
+      transition: border-color 0.18s ease, background 0.18s ease;
+    }
+
+    #drop-zone:hover,
+    #drop-zone.hover {
+      border-color: var(--accent);
+      background: #f8fbfd;
+    }
+
+    #drop-zone h3 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+    }
+
+    #drop-zone span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.55;
+    }
+
+    #file-input { display: none; }
+
+    .actions {
+      display: grid;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .btn {
+      border: 1px solid var(--accent);
+      border-radius: 999px;
+      padding: 11px 16px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn:hover { background: #1d3d5c; }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .field label {
       font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .field select {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--text);
+    }
+
+    .field select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    #status {
+      min-height: 1.35em;
+      margin-top: 12px;
+      color: var(--success);
+      font-size: 0.9rem;
+    }
+
+    #status.err { color: var(--danger); }
+
+    .export-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .export-bar button {
+      padding: 9px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .export-bar button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .overview {
+      display: grid;
+      grid-template-columns: minmax(280px, 0.95fr) minmax(0, 2fr);
+      gap: 16px;
+    }
+
+    .variable-panel,
+    .summary-panel {
+      padding: 18px;
+    }
+
+    .variable-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .variable-card,
+    .metric-card {
+      padding: 14px;
+      background: var(--paper-muted);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    .variable-card small,
+    .metric-card small {
+      display: block;
+      color: var(--muted);
+      font-size: 0.76rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .variable-card strong,
+    .metric-card strong {
+      display: block;
+      font-size: 1.05rem;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    .metric-strip {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric-card .note {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.84rem;
       line-height: 1.5;
     }
 
-    /* Sidebar section labels */
-    .sidebar-label {
-      font-size: 0.68rem;
-      font-weight: 600;
+    .table-wrap {
+      margin-top: 14px;
+      max-height: 320px;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+    }
+
+    .table-wrap::-webkit-scrollbar,
+    .plot-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+    .table-wrap::-webkit-scrollbar-thumb,
+    .plot-scroll::-webkit-scrollbar-thumb {
+      background: #c4cdd5;
+      border-radius: 999px;
+    }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-top: 6px;
+    }
+
+    .section-title h3 {
+      margin: 0;
+      font-size: 1.15rem;
+    }
+
+    .section-title span {
+      color: var(--muted);
+      font-size: 0.82rem;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--text-muted);
-      margin: 20px 0 8px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .sidebar-label .dot {
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: var(--accent);
     }
 
-    /* Drop zone */
-    #drop-zone {
-      border: 2px dashed var(--border);
-      border-radius: var(--radius);
-      padding: 28px 16px;
-      text-align: center;
-      transition: all var(--transition);
-      cursor: pointer;
-      background: var(--bg-secondary);
-      position: relative;
-      overflow: hidden;
-      flex-shrink: 0;
-    }
-    #drop-zone.compact {
-      padding: 10px 14px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      text-align: left;
-    }
-    #drop-zone.compact .drop-icon { display: none; }
-    #drop-zone.compact h3 { font-size: 0.75rem; margin: 0; }
-    #drop-zone.compact span { display: none; }
-    #drop-zone::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(ellipse at center, rgba(99,102,241,0.04), transparent 70%);
-      pointer-events: none;
-    }
-    #drop-zone:hover, #drop-zone:focus-visible {
-      border-color: var(--border-light);
-      background: var(--bg-card);
-    }
-    #drop-zone.hover {
-      border-color: var(--accent);
-      background: rgba(99, 102, 241, 0.04);
-      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.08);
-    }
-    .drop-icon { font-size: 1.6rem; margin-bottom: 6px; opacity: 0.35; }
-    #drop-zone h3 { font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; }
-    #drop-zone span { font-size: 0.7rem; color: var(--text-muted); display: block; }
-    #file-input { display: none; }
-
-    #status {
-      font-size: 0.74rem;
-      color: var(--success);
-      min-height: 1.2em;
-      font-weight: 500;
-      margin-top: 8px;
-    }
-    #status.err { color: var(--error); }
-
-    /* Buttons & controls in sidebar */
-    .actions {
+    .app {
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      margin-top: 4px;
-      flex-shrink: 0;
-    }
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: var(--radius-sm);
-      padding: 10px 18px;
-      font-size: 0.82rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all var(--transition);
-      box-shadow: 0 2px 8px rgba(99,102,241,0.25);
-      font-family: inherit;
-      width: 100%;
-    }
-    .btn:hover {
-      background: var(--accent-hover);
-      box-shadow: 0 4px 16px rgba(99,102,241,0.35);
-      transform: translateY(-1px);
-    }
-    .btn:active { transform: translateY(0); }
-
-    .field { display: flex; flex-direction: column; gap: 4px; }
-    .field label {
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      font-weight: 600;
-    }
-    .field select {
-      appearance: none;
-      background: var(--bg-card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239399ab' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;
-      color: var(--text-primary);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 9px 32px 9px 12px;
-      font-size: 0.82rem;
-      font-family: inherit;
-      cursor: pointer;
-      transition: all var(--transition);
-      width: 100%;
-    }
-    .field select:hover { border-color: var(--border-light); }
-    .field select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
-
-    /* Summary in sidebar */
-    #summary-wrap {
-      flex: 1;
-      overflow-y: auto;
-      margin-top: 4px;
-    }
-    #summary-wrap::-webkit-scrollbar { display: none; }
-    @supports (scrollbar-width: none) {
-      #summary-wrap { scrollbar-width: none; }
-    }
-    #summary-wrap #summary { font-size: 0.78rem; }
-    #summary-wrap table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
-    #summary-wrap th, #summary-wrap td { padding: 5px 6px; text-align: left; border-bottom: 1px solid var(--border); }
-    #summary-wrap th { color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.65rem; letter-spacing: 0.5px; }
-
-    /* Export in sidebar */
-    .export-bar {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-      margin-top: 4px;
-      flex-shrink: 0;
-    }
-    .export-bar button {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      background: var(--bg-secondary);
-      color: var(--text-secondary);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 5px 10px;
-      font-size: 0.7rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all var(--transition);
-      font-family: inherit;
-    }
-    .export-bar button:hover {
-      border-color: var(--accent);
-      color: var(--text-primary);
-      background: var(--accent-subtle);
-    }
-    .export-bar button::before { content: '\2193'; font-size: 0.8rem; opacity: 0.4; }
-
-    .sidebar-footer {
-      margin-top: auto;
-      padding-top: 20px;
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 0.68rem;
-      letter-spacing: 0.3px;
-      flex-shrink: 0;
-    }
-
-    /* ── Right main content ── */
-    .main {
-      padding: 28px 32px;
-      overflow-y: auto;
-      height: 100vh;
-    }
-
-    .main-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 24px;
-    }
-    .main-header h2 {
-      font-size: 1.1rem;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-    }
-    .main-header .pill {
-      background: var(--accent-subtle);
-      border: 1px solid rgba(99,102,241,0.15);
-      color: var(--accent-hover);
-      font-size: 0.68rem;
-      font-weight: 600;
-      padding: 3px 10px;
-      border-radius: 100px;
-    }
-
-    .section-label {
-      font-size: 0.72rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--text-muted);
-      margin: 28px 0 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .section-label:first-of-type { margin-top: 0; }
-    .section-label .dot {
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: var(--accent);
+      gap: 18px;
     }
 
     .plot-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 8px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
     }
-    .plot-grid.single { grid-template-columns: 1fr; }
 
-    .plot-cell {
-      background: var(--bg-card);
+    .plot-grid.triple {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .plot-card {
+      min-height: 340px;
+      padding: 10px;
+      background: var(--paper);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-      min-height: 360px;
-      transition: border-color var(--transition), box-shadow var(--transition);
-    }
-    .plot-cell:hover {
-      border-color: var(--border-light);
-      box-shadow: var(--shadow-md);
-    }
-    .plot-cell.tall { min-height: 460px; }
-
-    #app { display: none; }
-    .hidden { display: none; }
-
-    /* ── Responsive: iPad landscape / small desktop ── */
-    @media (max-width: 1100px) {
-      :root { --sidebar-w: 300px; }
+      border-radius: 12px;
     }
 
-    /* ── Responsive: iPad portrait / tablets ── */
-    @media (max-width: 960px) {
-      .shell {
+    .plot-card.tall { min-height: 440px; }
+    .plot-card.wide { grid-column: span 2; }
+    .plot-host { width: 100%; min-height: inherit; }
+    .hidden { display: none !important; }
+
+    @media (max-width: 1180px) {
+      .controls-grid,
+      .overview,
+      .masthead {
         grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr;
-        height: auto;
-        overflow: visible;
       }
-      body { overflow: auto; height: auto; }
-      .sidebar {
-        position: relative;
-        height: auto;
-        border-right: none;
-        border-bottom: 1px solid var(--border);
-        padding: 24px 20px;
-      }
-      .main { padding: 24px 20px; height: auto; overflow: visible; }
-      .plot-grid { grid-template-columns: 1fr 1fr; }
+
+      .metric-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .plot-grid.triple { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
-    /* ── Responsive: mobile ── */
-    @media (max-width: 640px) {
-      .sidebar { padding: 20px 16px; }
-      .main { padding: 20px 16px; }
-      .brand h1 { font-size: 1.15rem; }
-      .brand p { font-size: 0.72rem; }
-      .plot-grid { grid-template-columns: 1fr; }
-      .plot-cell { min-height: 280px; }
-      .plot-cell.tall { min-height: 340px; }
-      .main-header h2 { font-size: 0.95rem; }
-      .export-bar { gap: 4px; }
-      .export-bar button { padding: 4px 8px; font-size: 0.65rem; }
+    @media (max-width: 780px) {
+      .page { padding: 12px; }
+      .controls,
+      .variable-panel,
+      .summary-panel,
+      .masthead { padding: 16px; }
+      .metric-strip,
+      .plot-grid,
+      .plot-grid.triple,
+      .variable-grid {
+        grid-template-columns: 1fr;
+      }
+      .plot-card.wide { grid-column: span 1; }
     }
   </style>
 </head>
 <body>
-  <div class="shell">
-    <!-- ── Left Sidebar ── -->
-    <aside class="sidebar">
-      <div class="brand">
+  <div class="page">
+    <header class="panel masthead">
+      <div>
+        <div class="eyebrow">Bayesian Diagnostics</div>
         <h1>MCMCVisualizer</h1>
-        <p>Upload MCMC output or generate synthetic data to explore diagnostics.</p>
+        <p>Inspect chains, compare convergence diagnostics, and export posterior draws in a compact academic-style interface.</p>
       </div>
-
-      <div id="drop-zone" tabindex="0">
-        <div class="drop-icon">&#8693;</div>
-        <h3>Drop file here or click to browse</h3>
-        <span>Turing CSV &middot; Stan CSV &middot; MCMCChains JSON</span>
-        <input type="file" id="file-input" accept=".csv,.json,.txt">
+      <div class="status-card">
+        <div class="eyebrow">Dataset status</div>
+        <p id="data-message">No inference data loaded yet.</p>
+        <strong id="data-info">0 chains · 0 vars · 0 draws</strong>
       </div>
+    </header>
 
-      <div class="actions">
-        <button class="btn" id="btn-demo">&#9654; Load Demo Data</button>
-        <div class="field">
-          <label for="var-select">Variable</label>
-          <select id="var-select"><option disabled selected>Load data first</option></select>
+    <section class="panel controls">
+      <div class="controls-grid">
+        <div class="control-block">
+          <h2>Load traces</h2>
+          <p>Upload a Stan CSV, Turing CSV, or MCMCChains JSON file. The demo dataset includes an energy variable so all diagnostics have something to show.</p>
+          <div id="drop-zone" tabindex="0">
+            <h3>Drop file here or click to browse</h3>
+            <span>Single-file upload is enough for quick inspection. Use the demo dataset if you want an immediate example.</span>
+            <input type="file" id="file-input" accept=".csv,.json,.txt">
+          </div>
+          <div id="status"></div>
+        </div>
+
+        <div class="control-block">
+          <h2>Focus controls</h2>
+          <p>Switch the active parameter while keeping the model-wide diagnostics in place below.</p>
+          <div class="actions">
+            <button class="btn" id="btn-demo">Load Synthetic Posterior</button>
+            <div class="field">
+              <label for="var-select">Focus variable</label>
+              <select id="var-select"><option disabled selected>Load data first</option></select>
+            </div>
+          </div>
+        </div>
+
+        <div id="export-panel" class="control-block hidden">
+          <h2>Export</h2>
+          <p>Round-trip the current inference data into other formats without leaving the demo.</p>
+          <div class="export-bar">
+            <button data-fmt="turing">Turing CSV</button>
+            <button data-fmt="mcmcchains-csv">MCMCChains CSV</button>
+            <button data-fmt="stan">Stan CSV</button>
+            <button data-fmt="wide">Wide CSV</button>
+            <button data-fmt="json">JSON</button>
+            <button data-fmt="mcmcchains-json">MCMCChains JSON</button>
+          </div>
         </div>
       </div>
-      <div id="status"></div>
+    </section>
 
-      <div id="app-sidebar" class="hidden">
-        <div class="sidebar-label"><span class="dot"></span> Summary Statistics</div>
-        <div id="summary-wrap">
+    <section class="overview">
+      <section id="variable-panel" class="panel variable-panel hidden">
+        <h2 id="selected-name">No variable selected</h2>
+        <p id="selected-note">Variable-level diagnostics will appear here after data is loaded.</p>
+        <div class="variable-grid" id="variable-stats"></div>
+      </section>
+
+      <section id="summary-panel" class="panel summary-panel hidden">
+        <h2>All variables</h2>
+        <p>Use the table as the compact diagnostic ledger for the whole posterior.</p>
+        <div class="table-wrap">
           <div id="summary"></div>
         </div>
+      </section>
+    </section>
 
-        <div class="sidebar-label"><span class="dot"></span> Export</div>
-        <div class="export-bar">
-          <button data-fmt="turing">Turing CSV</button>
-          <button data-fmt="mcmcchains-csv">MCMCChains CSV</button>
-          <button data-fmt="stan">Stan CSV</button>
-          <button data-fmt="wide">Wide CSV</button>
-          <button data-fmt="json">JSON</button>
-          <button data-fmt="mcmcchains-json">MCMCChains JSON</button>
-        </div>
+    <div id="app" class="app hidden">
+      <div class="metric-strip" id="metric-strip"></div>
+
+      <div class="section-title">
+        <h3>Trajectory and distribution</h3>
+        <span>Variable scoped</span>
+      </div>
+      <div class="plot-grid triple">
+        <div class="plot-card"><div class="plot-host" id="trace"></div></div>
+        <div class="plot-card"><div class="plot-host" id="density"></div></div>
+        <div class="plot-card"><div class="plot-host" id="hist"></div></div>
+        <div class="plot-card"><div class="plot-host" id="ecdf"></div></div>
+        <div class="plot-card"><div class="plot-host" id="acf"></div></div>
+        <div class="plot-card"><div class="plot-host" id="cmean"></div></div>
       </div>
 
-      <div class="sidebar-footer">MCMCVisualizer &mdash; Built for Bayesian workflows</div>
-    </aside>
-
-    <!-- ── Right Main Content ── -->
-    <main class="main">
-      <div class="main-header">
-        <h2>Diagnostics</h2>
-        <span class="pill" id="data-info">No data loaded</span>
+      <div class="section-title">
+        <h3>Cross-chain convergence</h3>
+        <span>Variable scoped</span>
+      </div>
+      <div class="plot-grid">
+        <div class="plot-card"><div class="plot-host" id="rank"></div></div>
+        <div class="plot-card"><div class="plot-host" id="running-rhat"></div></div>
+        <div class="plot-card wide"><div class="plot-host" id="chain-intervals"></div></div>
       </div>
 
-      <div id="app">
-        <span class="section-label"><span class="dot"></span> Per-Variable Diagnostics</span>
-        <div class="plot-grid">
-          <div class="plot-cell" id="trace"></div>
-          <div class="plot-cell" id="hist"></div>
-          <div class="plot-cell" id="acf"></div>
-          <div class="plot-cell" id="cmean"></div>
-        </div>
-
-        <span class="section-label"><span class="dot"></span> Multi-Variable Diagnostics</span>
-        <div class="plot-grid single">
-          <div class="plot-cell tall" id="forest"></div>
-          <div class="plot-cell tall" id="pairs"></div>
-        </div>
+      <div class="section-title">
+        <h3>Model-wide overview</h3>
+        <span>All variables</span>
       </div>
-    </main>
+      <div class="plot-grid">
+        <div class="plot-card tall"><div class="plot-host" id="forest"></div></div>
+        <div class="plot-card tall"><div class="plot-host" id="violin"></div></div>
+        <div class="plot-card wide tall"><div class="plot-host" id="diagnostics-heatmap"></div></div>
+        <div class="plot-card tall"><div class="plot-host" id="pairs"></div></div>
+        <div class="plot-card tall"><div class="plot-host" id="energy"></div></div>
+      </div>
+    </div>
   </div>
 
   <script type="module">
@@ -470,115 +515,272 @@
     const statusEl = document.getElementById('status');
     const appEl = document.getElementById('app');
     const varSelect = document.getElementById('var-select');
+    const metricStrip = document.getElementById('metric-strip');
+    const variableStatsEl = document.getElementById('variable-stats');
+    const variablePanel = document.getElementById('variable-panel');
+    const summaryPanel = document.getElementById('summary-panel');
+    const exportPanel = document.getElementById('export-panel');
 
-    function status(msg, isErr) {
-      statusEl.textContent = msg;
-      statusEl.className = isErr ? 'err' : '';
+    function status(message, isError = false) {
+      statusEl.textContent = message;
+      statusEl.className = isError ? 'err' : '';
+    }
+
+    function formatNumber(value, digits = 3) {
+      if (value === undefined || value === null || Number.isNaN(value)) return '—';
+      return Number(value).toFixed(digits);
+    }
+
+    function isAuxiliaryVariable(variable) {
+      return variable.endsWith('__') || variable === 'energy' || variable === 'log_density';
+    }
+
+    function renderMetricStrip(variable) {
+      if (!currentData) return;
+      const stats = currentData.variableStats(variable);
+      const convergence = [
+        stats.rhat !== undefined ? `R-hat ${stats.rhat.toFixed(3)}` : 'R-hat —',
+        stats.splitRhat !== undefined ? `Split ${stats.splitRhat.toFixed(3)}` : 'Split —',
+      ].join(' · ');
+
+      const cards = [
+        {
+          label: 'Posterior mean',
+          value: formatNumber(stats.mean),
+          note: `sd ${formatNumber(stats.stdev)} · skew ${formatNumber(stats.skewness)}`
+        },
+        {
+          label: '90% HDI',
+          value: `[${formatNumber(stats.hdi90[0])}, ${formatNumber(stats.hdi90[1])}]`,
+          note: `width ${formatNumber(stats.hdi90Width)}`
+        },
+        {
+          label: 'Sampling efficiency',
+          value: `${Math.round(stats.ess)} ESS`,
+          note: `bulk ${Math.round(stats.bulkEss)} · tail ${Math.round(stats.tailEss)}`
+        },
+        {
+          label: 'Monte Carlo error',
+          value: formatNumber(stats.mcse),
+          note: `ESS/draw ${formatNumber(stats.essPerDraw)}`
+        },
+        {
+          label: 'Convergence',
+          value: convergence,
+          note: `Geweke z ${formatNumber(stats.geweke.z)}`
+        },
+      ];
+
+      metricStrip.innerHTML = cards.map(card => `
+        <div class="metric-card">
+          <small>${card.label}</small>
+          <strong>${card.value}</strong>
+          <div class="note">${card.note}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderVariablePanel(variable) {
+      if (!currentData) return;
+      const stats = currentData.variableStats(variable);
+      document.getElementById('selected-name').textContent = variable;
+      document.getElementById('selected-note').textContent =
+        `Quantiles ${formatNumber(stats.quantiles.q5)} / ${formatNumber(stats.quantiles.q50)} / ${formatNumber(stats.quantiles.q95)} and excess kurtosis ${formatNumber(stats.excessKurtosis)}.`;
+
+      const cards = [
+        ['MCSE', formatNumber(stats.mcse)],
+        ['ESS / draw', formatNumber(stats.essPerDraw)],
+        ['Geweke p', formatNumber(stats.geweke.pValue)],
+        ['Excess kurtosis', formatNumber(stats.excessKurtosis)],
+      ];
+
+      variableStatsEl.innerHTML = cards.map(([label, value]) => `
+        <div class="variable-card">
+          <small>${label}</small>
+          <strong>${value}</strong>
+        </div>
+      `).join('');
+    }
+
+    function readFile(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const text = String(reader.result ?? '');
+          const format = detectFormat(text);
+          const data = fromAutoDetect(text);
+          status(`Loaded ${file.name} as ${format}.`);
+          loadData(data, file.name);
+        } catch (error) {
+          status(`Error: ${error.message}`, true);
+        }
+      };
+      reader.readAsText(file);
     }
 
     dropZone.addEventListener('click', () => fileInput.click());
-    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('hover'); });
+    dropZone.addEventListener('dragover', event => {
+      event.preventDefault();
+      dropZone.classList.add('hover');
+    });
     dropZone.addEventListener('dragleave', () => dropZone.classList.remove('hover'));
-    dropZone.addEventListener('drop', e => {
-      e.preventDefault();
+    dropZone.addEventListener('drop', event => {
+      event.preventDefault();
       dropZone.classList.remove('hover');
-      const file = e.dataTransfer.files[0];
+      const file = event.dataTransfer.files[0];
       if (file) readFile(file);
     });
     fileInput.addEventListener('change', () => {
       if (fileInput.files[0]) readFile(fileInput.files[0]);
     });
 
-    function readFile(file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const text = reader.result;
-          const fmt = detectFormat(text);
-          const data = fromAutoDetect(text);
-          status(`Loaded ${file.name} (${fmt}, ${data.chainNames.length} chains, ${data.variableNames.length} vars, ${data.drawCount} draws)`);
-          loadData(data);
-        } catch (err) {
-          status(`Error: ${err.message}`, true);
-        }
-      };
-      reader.readAsText(file);
-    }
-
     document.getElementById('btn-demo').addEventListener('click', () => {
-      function rng(s) { return () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; }; }
-      function norm(r) { return () => { let u = 0, v = 0; while (!u) u = r(); while (!v) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }; }
-      function walk(n, start, scale, seed) { const g = norm(rng(seed)); const a = [start]; for (let i = 1; i < n; i++) a.push(a[i - 1] + g() * scale); return a; }
-
-      const data = fromChainArrays({
-        'chain 1': { mu: walk(2000, 0, 0.15, 42), sigma: walk(2000, 1, 0.05, 123).map(Math.abs), beta: walk(2000, -2, 0.2, 777) },
-        'chain 2': { mu: walk(2000, 0.1, 0.15, 99), sigma: walk(2000, 1.05, 0.05, 456).map(Math.abs), beta: walk(2000, -1.9, 0.2, 888) },
-        'chain 3': { mu: walk(2000, -0.05, 0.15, 200), sigma: walk(2000, 0.95, 0.05, 300).map(Math.abs), beta: walk(2000, -2.1, 0.2, 400) },
-      });
-      status('Loaded synthetic demo data (3 chains, 3 vars, 2000 draws)');
-      loadData(data);
-    });
-
-    varSelect.addEventListener('change', () => {
-      const v = varSelect.value;
-      for (const h of handles) h.update(v);
-    });
-
-    function loadData(data) {
-      currentData = data;
-      appEl.style.display = 'block';
-      document.getElementById('app-sidebar').classList.remove('hidden');
-      document.getElementById('data-info').textContent =
-        `${data.chainNames.length} chains \u00b7 ${data.variableNames.length} vars \u00b7 ${data.drawCount} draws`;
-
-      dropZone.classList.add('compact');
-      dropZone.querySelector('h3').textContent = 'Drop or click to load another file';
-
-      varSelect.innerHTML = '';
-      for (const v of data.variableNames) {
-        const opt = document.createElement('option');
-        opt.value = v; opt.textContent = v;
-        varSelect.appendChild(opt);
+      function rng(seed) {
+        return () => {
+          seed = (seed * 1664525 + 1013904223) >>> 0;
+          return seed / 4294967296;
+        };
       }
 
-      for (const h of handles) h.destroy();
+      function normal(random) {
+        return () => {
+          let u = 0;
+          let v = 0;
+          while (!u) u = random();
+          while (!v) v = random();
+          return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+        };
+      }
+
+      function ar1(n, center, phi, scale, seed) {
+        const rand = rng(seed);
+        const gaussian = normal(rand);
+        const values = new Array(n);
+        values[0] = center + gaussian() * scale;
+        for (let i = 1; i < n; i++) {
+          values[i] = center + phi * (values[i - 1] - center) + gaussian() * scale;
+        }
+        return values;
+      }
+
+      const n = 1800;
+      const chains = {
+        'chain 1': {
+          mu: ar1(n, 0.15, 0.87, 0.12, 11),
+          beta: ar1(n, -1.75, 0.84, 0.16, 21),
+          tau: ar1(n, 0.65, 0.82, 0.08, 31).map(value => Math.max(0.03, value)),
+          sigma: ar1(n, 0.92, 0.80, 0.05, 41).map(value => Math.max(0.05, value)),
+          energy__: ar1(n, 14.3, 0.55, 0.45, 51),
+        },
+        'chain 2': {
+          mu: ar1(n, 0.1, 0.86, 0.12, 12),
+          beta: ar1(n, -1.68, 0.85, 0.15, 22),
+          tau: ar1(n, 0.72, 0.83, 0.09, 32).map(value => Math.max(0.03, value)),
+          sigma: ar1(n, 0.88, 0.80, 0.05, 42).map(value => Math.max(0.05, value)),
+          energy__: ar1(n, 14.1, 0.58, 0.42, 52),
+        },
+        'chain 3': {
+          mu: ar1(n, 0.19, 0.88, 0.12, 13),
+          beta: ar1(n, -1.81, 0.84, 0.16, 23),
+          tau: ar1(n, 0.61, 0.82, 0.08, 33).map(value => Math.max(0.03, value)),
+          sigma: ar1(n, 0.95, 0.80, 0.05, 43).map(value => Math.max(0.05, value)),
+          energy__: ar1(n, 14.4, 0.57, 0.44, 53),
+        },
+        'chain 4': {
+          mu: ar1(n, 0.12, 0.86, 0.12, 14),
+          beta: ar1(n, -1.72, 0.83, 0.15, 24),
+          tau: ar1(n, 0.69, 0.82, 0.09, 34).map(value => Math.max(0.03, value)),
+          sigma: ar1(n, 0.9, 0.80, 0.05, 44).map(value => Math.max(0.05, value)),
+          energy__: ar1(n, 14.25, 0.56, 0.43, 54),
+        }
+      };
+
+      const data = fromChainArrays(chains);
+      status('Loaded synthetic posterior with four chains.');
+      loadData(data, 'synthetic posterior');
+    });
+
+    function loadData(data, sourceLabel) {
+      currentData = data;
+      appEl.classList.remove('hidden');
+      variablePanel.classList.remove('hidden');
+      summaryPanel.classList.remove('hidden');
+      exportPanel.classList.remove('hidden');
+
+      document.getElementById('data-message').textContent = `Showing ${sourceLabel}. Switch variables to inspect per-parameter behavior while keeping the model-wide diagnostics visible below.`;
+      document.getElementById('data-info').textContent =
+        `${data.chainNames.length} chains · ${data.variableNames.length} vars · ${data.drawCount} draws`;
+
+      const focusVariables = data.variableNames.filter(variable => !isAuxiliaryVariable(variable));
+      const firstVariable = focusVariables[0] ?? data.variableNames[0];
+
+      varSelect.innerHTML = '';
+      for (const variable of focusVariables.length ? focusVariables : data.variableNames) {
+        const option = document.createElement('option');
+        option.value = variable;
+        option.textContent = variable;
+        varSelect.appendChild(option);
+      }
+      varSelect.value = firstVariable;
+
+      for (const handle of handles) handle.destroy();
       handles.length = 0;
 
-      const firstVar = data.variableNames[0];
-      const plotH = 370;
-      const tallH = 450;
+      const plotHeight = 350;
+      const tallHeight = 450;
+      const pairVariables = focusVariables.slice(0, 4);
+
       handles.push(plots.summaryTable(document.getElementById('summary'), data));
-      handles.push(plots.tracePlot(document.getElementById('trace'), data, firstVar, { height: plotH }));
-      handles.push(plots.histogramPlot(document.getElementById('hist'), data, firstVar, { height: plotH }));
-      handles.push(plots.autocorrelationPlot(document.getElementById('acf'), data, firstVar, { height: plotH }));
-      handles.push(plots.cumulativeMeanPlot(document.getElementById('cmean'), data, firstVar, { height: plotH }));
-      handles.push(plots.forestPlot(document.getElementById('forest'), data, { height: tallH }));
-      handles.push(plots.pairPlot(document.getElementById('pairs'), data, undefined, { height: tallH }));
+      handles.push(plots.tracePlot(document.getElementById('trace'), data, firstVariable, { height: plotHeight, theme: 'light' }));
+      handles.push(plots.densityPlot(document.getElementById('density'), data, firstVariable, { height: plotHeight, theme: 'light' }));
+      handles.push(plots.histogramPlot(document.getElementById('hist'), data, firstVariable, { height: plotHeight, theme: 'light' }));
+      handles.push(plots.ecdfPlot(document.getElementById('ecdf'), data, firstVariable, { height: plotHeight, theme: 'light' }));
+      handles.push(plots.autocorrelationPlot(document.getElementById('acf'), data, firstVariable, { height: plotHeight, theme: 'light' }));
+      handles.push(plots.cumulativeMeanPlot(document.getElementById('cmean'), data, firstVariable, { height: plotHeight, theme: 'light' }));
+      handles.push(plots.rankPlot(document.getElementById('rank'), data, firstVariable, { height: plotHeight, theme: 'light' }));
+      handles.push(plots.runningRhatPlot(document.getElementById('running-rhat'), data, firstVariable, { height: plotHeight, theme: 'light' }));
+      handles.push(plots.chainIntervalsPlot(document.getElementById('chain-intervals'), data, firstVariable, { height: plotHeight, theme: 'light' }));
+      handles.push(plots.forestPlot(document.getElementById('forest'), data, { height: tallHeight, theme: 'light' }));
+      handles.push(plots.violinPlot(document.getElementById('violin'), data.filterVariables(focusVariables), { height: tallHeight, theme: 'light' }));
+      handles.push(plots.diagnosticsHeatmapPlot(document.getElementById('diagnostics-heatmap'), data.filterVariables(focusVariables), { height: tallHeight, theme: 'light' }));
+      handles.push(plots.pairPlot(document.getElementById('pairs'), data.filterVariables(pairVariables), pairVariables, { height: tallHeight, theme: 'light' }));
+      handles.push(plots.energyPlot(document.getElementById('energy'), data, { height: tallHeight, theme: 'light' }));
+
+      renderMetricStrip(firstVariable);
+      renderVariablePanel(firstVariable);
     }
+
+    varSelect.addEventListener('change', () => {
+      const variable = varSelect.value;
+      renderMetricStrip(variable);
+      renderVariablePanel(variable);
+      for (const handle of handles) handle.update(variable);
+    });
 
     function download(content, filename) {
       const blob = new Blob([content], { type: 'text/plain' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(a.href);
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(link.href);
     }
 
-    for (const btn of document.querySelectorAll('.export-bar button')) {
-      btn.addEventListener('click', () => {
+    for (const button of document.querySelectorAll('.export-bar button')) {
+      button.addEventListener('click', () => {
         if (!currentData) return;
-        const fmt = btn.dataset.fmt;
-        const exports = {
-          'turing':           () => download(currentData.toTuringCSV(), 'mcmc_turing.csv'),
-          'mcmcchains-csv':   () => download(currentData.toMCMCChainsCSV(), 'mcmc_chains.csv'),
-          'stan':             () => download(currentData.toStanCSV(), 'mcmc_stan.csv'),
-          'wide':             () => download(currentData.toWideCSV(), 'mcmc_wide.csv'),
-          'json':             () => download(currentData.toJSON(), 'mcmc_data.json'),
-          'mcmcchains-json':  () => download(currentData.toMCMCChainsJSON(), 'mcmc_chains.json'),
+        const format = button.dataset.fmt;
+        const exporters = {
+          turing: () => download(currentData.toTuringCSV(), 'mcmc_turing.csv'),
+          'mcmcchains-csv': () => download(currentData.toMCMCChainsCSV(), 'mcmc_chains.csv'),
+          stan: () => download(currentData.toStanCSV(), 'mcmc_stan.csv'),
+          wide: () => download(currentData.toWideCSV(), 'mcmc_wide.csv'),
+          json: () => download(currentData.toJSON(), 'mcmc_data.json'),
+          'mcmcchains-json': () => download(currentData.toMCMCChainsJSON(), 'mcmc_chains.json'),
         };
-        exports[fmt]?.();
-        status(`Exported as ${fmt}`);
+
+        exporters[format]?.();
+        status(`Exported ${format}.`);
       });
     }
   </script>

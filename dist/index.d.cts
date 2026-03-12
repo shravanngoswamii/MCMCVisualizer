@@ -8,6 +8,10 @@ interface SequenceStats {
     stdev: number;
     count: number;
     ess: number;
+    essPerDraw: number;
+    mcse: number;
+    skewness: number;
+    excessKurtosis: number;
     autocorrelation: number[];
 }
 interface VariableStats {
@@ -15,7 +19,18 @@ interface VariableStats {
     stdev: number;
     count: number;
     ess: number;
+    essPerDraw: number;
+    mcse: number;
+    bulkEss: number;
+    tailEss: number;
     rhat: number | undefined;
+    splitRhat: number | undefined;
+    geweke: {
+        z: number;
+        pValue: number;
+    };
+    skewness: number;
+    excessKurtosis: number;
     quantiles: {
         q5: number;
         q25: number;
@@ -24,6 +39,7 @@ interface VariableStats {
         q95: number;
     };
     hdi90: [number, number];
+    hdi90Width: number;
 }
 interface VariableSummary extends VariableStats {
     variable: string;
@@ -81,6 +97,8 @@ declare function computeRhat(chainMeans: number[], chainStdevs: number[], chainC
 
 declare function computeMean(arr: Float64Array): number;
 declare function computeStdev(arr: Float64Array): number;
+declare function computeSkewness(arr: Float64Array): number;
+declare function computeExcessKurtosis(arr: Float64Array): number;
 declare function computeQuantiles(arr: Float64Array): {
     q5: number;
     q25: number;
@@ -89,6 +107,17 @@ declare function computeQuantiles(arr: Float64Array): {
     q95: number;
 };
 declare function computeHDI(arr: Float64Array, credMass?: number): [number, number];
+
+declare function computeMCSE(draws: Float64Array): number;
+declare function computeBulkESS(chains: Float64Array[]): number;
+declare function computeTailESS(chains: Float64Array[]): number;
+
+declare function computeGeweke(draws: Float64Array, firstFrac?: number, lastFrac?: number): {
+    z: number;
+    pValue: number;
+};
+
+declare function computeSplitRhat(chains: Float64Array[]): number | undefined;
 
 declare function detectFormat(text: string): FileFormat;
 
@@ -119,17 +148,41 @@ declare function summaryTable(container: HTMLElement, data: InferenceData, optio
     update(): void;
 };
 
+declare function rankPlot(container: HTMLElement, data: InferenceData, variable: string, options?: PlotOptions): PlotHandle;
+
+declare function runningRhatPlot(container: HTMLElement, data: InferenceData, variable: string, options?: PlotOptions): PlotHandle;
+
+declare function densityPlot(container: HTMLElement, data: InferenceData, variable: string, options?: PlotOptions): PlotHandle;
+
+declare function violinPlot(container: HTMLElement, data: InferenceData, options?: PlotOptions): PlotHandle;
+
+declare function energyPlot(container: HTMLElement, data: InferenceData, options?: PlotOptions): PlotHandle;
+
+declare function ecdfPlot(container: HTMLElement, data: InferenceData, variable: string, options?: PlotOptions): PlotHandle;
+
+declare function chainIntervalsPlot(container: HTMLElement, data: InferenceData, variable: string, options?: PlotOptions): PlotHandle;
+
+declare function diagnosticsHeatmapPlot(container: HTMLElement, data: InferenceData, options?: PlotOptions): PlotHandle;
+
 type index_PlotHandle = PlotHandle;
 type index_PlotOptions = PlotOptions;
 declare const index_autocorrelationPlot: typeof autocorrelationPlot;
+declare const index_chainIntervalsPlot: typeof chainIntervalsPlot;
 declare const index_cumulativeMeanPlot: typeof cumulativeMeanPlot;
+declare const index_densityPlot: typeof densityPlot;
+declare const index_diagnosticsHeatmapPlot: typeof diagnosticsHeatmapPlot;
+declare const index_ecdfPlot: typeof ecdfPlot;
+declare const index_energyPlot: typeof energyPlot;
 declare const index_forestPlot: typeof forestPlot;
 declare const index_histogramPlot: typeof histogramPlot;
 declare const index_pairPlot: typeof pairPlot;
+declare const index_rankPlot: typeof rankPlot;
+declare const index_runningRhatPlot: typeof runningRhatPlot;
 declare const index_summaryTable: typeof summaryTable;
 declare const index_tracePlot: typeof tracePlot;
+declare const index_violinPlot: typeof violinPlot;
 declare namespace index {
-  export { type index_PlotHandle as PlotHandle, type index_PlotOptions as PlotOptions, index_autocorrelationPlot as autocorrelationPlot, index_cumulativeMeanPlot as cumulativeMeanPlot, index_forestPlot as forestPlot, index_histogramPlot as histogramPlot, index_pairPlot as pairPlot, index_summaryTable as summaryTable, index_tracePlot as tracePlot };
+  export { type index_PlotHandle as PlotHandle, type index_PlotOptions as PlotOptions, index_autocorrelationPlot as autocorrelationPlot, index_chainIntervalsPlot as chainIntervalsPlot, index_cumulativeMeanPlot as cumulativeMeanPlot, index_densityPlot as densityPlot, index_diagnosticsHeatmapPlot as diagnosticsHeatmapPlot, index_ecdfPlot as ecdfPlot, index_energyPlot as energyPlot, index_forestPlot as forestPlot, index_histogramPlot as histogramPlot, index_pairPlot as pairPlot, index_rankPlot as rankPlot, index_runningRhatPlot as runningRhatPlot, index_summaryTable as summaryTable, index_tracePlot as tracePlot, index_violinPlot as violinPlot };
 }
 
 declare function fromTuringCSV(text: string): InferenceData;
@@ -139,4 +192,4 @@ declare function fromAutoDetect(text: string): InferenceData;
 declare function fromMCMCChainsJSON(text: string): InferenceData;
 declare function fromChainArrays(data: Record<string, Record<string, number[]>>): InferenceData;
 
-export { type ChainData, type FileFormat, type InferenceData, MCMCData, type PlotHandle, type PlotOptions, type SequenceStats, type VariableStats, type VariableSummary, computeESS, computeHDI, computeMean, computeQuantiles, computeRhat, computeStdev, detectFormat, fromAutoDetect, fromChainArrays, fromMCMCChainsJSON, fromStanCSV, fromStanCSVFiles, fromTuringCSV, index as plots };
+export { type ChainData, type FileFormat, type InferenceData, MCMCData, type PlotHandle, type PlotOptions, type SequenceStats, type VariableStats, type VariableSummary, computeBulkESS, computeESS, computeExcessKurtosis, computeGeweke, computeHDI, computeMCSE, computeMean, computeQuantiles, computeRhat, computeSkewness, computeSplitRhat, computeStdev, computeTailESS, detectFormat, fromAutoDetect, fromChainArrays, fromMCMCChainsJSON, fromStanCSV, fromStanCSVFiles, fromTuringCSV, index as plots };

@@ -21,12 +21,19 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 var index_exports = {};
 __export(index_exports, {
   MCMCData: () => MCMCData,
+  computeBulkESS: () => computeBulkESS,
   computeESS: () => computeESS,
+  computeExcessKurtosis: () => computeExcessKurtosis,
+  computeGeweke: () => computeGeweke,
   computeHDI: () => computeHDI,
+  computeMCSE: () => computeMCSE,
   computeMean: () => computeMean,
   computeQuantiles: () => computeQuantiles,
   computeRhat: () => computeRhat,
+  computeSkewness: () => computeSkewness,
+  computeSplitRhat: () => computeSplitRhat,
   computeStdev: () => computeStdev,
+  computeTailESS: () => computeTailESS,
   detectFormat: () => detectFormat,
   fromAutoDetect: () => fromAutoDetect,
   fromChainArrays: () => fromChainArrays,
@@ -325,6 +332,28 @@ function computeStdev(arr) {
   for (let i = 0; i < arr.length; i++) sumsq += arr[i] * arr[i];
   return Math.sqrt(sumsq / arr.length - m * m);
 }
+function computeSkewness(arr) {
+  if (arr.length < 3) return NaN;
+  const mean2 = computeMean(arr);
+  const sd = computeStdev(arr);
+  if (!isFinite(sd) || sd === 0) return 0;
+  let thirdMoment = 0;
+  for (let i = 0; i < arr.length; i++) {
+    thirdMoment += (arr[i] - mean2) ** 3;
+  }
+  return thirdMoment / arr.length / sd ** 3;
+}
+function computeExcessKurtosis(arr) {
+  if (arr.length < 4) return NaN;
+  const mean2 = computeMean(arr);
+  const sd = computeStdev(arr);
+  if (!isFinite(sd) || sd === 0) return 0;
+  let fourthMoment = 0;
+  for (let i = 0; i < arr.length; i++) {
+    fourthMoment += (arr[i] - mean2) ** 4;
+  }
+  return fourthMoment / arr.length / sd ** 4 - 3;
+}
 function computeQuantiles(arr) {
   const sorted = sortedCopy(arr);
   return {
@@ -350,6 +379,212 @@ function computeHDI(arr, credMass = 0.9) {
     }
   }
   return [sorted[bestLo], sorted[bestLo + intervalSize - 1]];
+}
+
+// src/stats/mcse.ts
+function computeMCSE(draws) {
+  if (draws.length < 4) return NaN;
+  const sd = computeStdev(draws);
+  const { ess } = computeESS(draws);
+  if (ess <= 0 || isNaN(sd)) return NaN;
+  return sd / Math.sqrt(ess);
+}
+function computeBulkESS(chains) {
+  if (chains.length === 0) return 0;
+  const ranked = rankNormalize(chains);
+  return computeMultiChainESS(ranked);
+}
+function computeTailESS(chains) {
+  if (chains.length === 0) return 0;
+  const all = concatChains(chains);
+  const q05 = computeQuantiles(all).q5;
+  const q95 = computeQuantiles(all).q95;
+  const indicators = chains.map((chain) => {
+    const ind = new Float64Array(chain.length);
+    for (let i = 0; i < chain.length; i++) {
+      ind[i] = chain[i] <= q05 || chain[i] >= q95 ? 1 : 0;
+    }
+    return ind;
+  });
+  return computeMultiChainESS(indicators);
+}
+function rankNormalize(chains) {
+  const all = concatChains(chains);
+  const sorted = sortedCopy(all);
+  const n = all.length;
+  const rankMap = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    let lo = 0, hi = n - 1;
+    while (lo < hi) {
+      const mid = lo + hi >> 1;
+      if (sorted[mid] < all[i]) lo = mid + 1;
+      else hi = mid;
+    }
+    let count = 1;
+    while (lo + count < n && sorted[lo + count] === sorted[lo]) count++;
+    rankMap[i] = (lo + (lo + count - 1)) / 2 + 1;
+  }
+  const result = [];
+  let offset = 0;
+  for (const chain of chains) {
+    const ranked = new Float64Array(chain.length);
+    for (let i = 0; i < chain.length; i++) {
+      const r = rankMap[offset + i];
+      const p = (r - 0.375) / (n + 0.25);
+      ranked[i] = normalQuantile(p);
+    }
+    result.push(ranked);
+    offset += chain.length;
+  }
+  return result;
+}
+function computeMultiChainESS(chains) {
+  let totalESS = 0;
+  for (const chain of chains) {
+    const { ess } = computeESS(chain);
+    totalESS += ess;
+  }
+  return totalESS;
+}
+function concatChains(chains) {
+  let len = 0;
+  for (const c of chains) len += c.length;
+  const result = new Float64Array(len);
+  let offset = 0;
+  for (const c of chains) {
+    result.set(c, offset);
+    offset += c.length;
+  }
+  return result;
+}
+function normalQuantile(p) {
+  if (p <= 0) return -Infinity;
+  if (p >= 1) return Infinity;
+  if (p === 0.5) return 0;
+  const a = [
+    -39.69683028665376,
+    220.9460984245205,
+    -275.9285104469687,
+    138.357751867269,
+    -30.66479806614716,
+    2.506628277459239
+  ];
+  const b = [
+    -54.47609879822406,
+    161.5858368580409,
+    -155.6989798598866,
+    66.80131188771972,
+    -13.28068155288572
+  ];
+  const c = [
+    -0.007784894002430293,
+    -0.3223964580411365,
+    -2.400758277161838,
+    -2.549732539343734,
+    4.374664141464968,
+    2.938163982698783
+  ];
+  const d = [
+    0.007784695709041462,
+    0.3224671290700398,
+    2.445134137142996,
+    3.754408661907416
+  ];
+  const pLow = 0.02425;
+  const pHigh = 1 - pLow;
+  let q;
+  if (p < pLow) {
+    q = Math.sqrt(-2 * Math.log(p));
+    return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+  } else if (p <= pHigh) {
+    q = p - 0.5;
+    const r = q * q;
+    return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+  } else {
+    q = Math.sqrt(-2 * Math.log(1 - p));
+    return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+  }
+}
+
+// src/stats/geweke.ts
+function computeGeweke(draws, firstFrac = 0.1, lastFrac = 0.5) {
+  const n = draws.length;
+  if (n < 20) return { z: NaN, pValue: NaN };
+  const nFirst = Math.floor(n * firstFrac);
+  const nLast = Math.floor(n * lastFrac);
+  if (nFirst < 2 || nLast < 2) return { z: NaN, pValue: NaN };
+  const firstPart = draws.slice(0, nFirst);
+  const lastPart = draws.slice(n - nLast);
+  const meanFirst = computeMean(firstPart);
+  const meanLast = computeMean(lastPart);
+  const seFirst = spectralDensityAt0(firstPart);
+  const seLast = spectralDensityAt0(lastPart);
+  if (seFirst + seLast <= 0) return { z: NaN, pValue: NaN };
+  const z = (meanFirst - meanLast) / Math.sqrt(seFirst / nFirst + seLast / nLast);
+  const pValue = 2 * (1 - normalCDF(Math.abs(z)));
+  return { z, pValue };
+}
+function spectralDensityAt0(draws) {
+  const n = draws.length;
+  const mean2 = computeMean(draws);
+  const sd = computeStdev(draws);
+  if (isNaN(sd) || sd === 0) return 0;
+  const maxLag = Math.min(n - 1, Math.floor(n * 0.2));
+  let gamma0 = 0;
+  for (let i = 0; i < n; i++) gamma0 += (draws[i] - mean2) ** 2;
+  gamma0 /= n;
+  let s = gamma0;
+  for (let lag = 1; lag <= maxLag; lag++) {
+    const weight = 1 - lag / (maxLag + 1);
+    let gamma = 0;
+    for (let i = 0; i < n - lag; i++) {
+      gamma += (draws[i] - mean2) * (draws[i + lag] - mean2);
+    }
+    gamma /= n;
+    s += 2 * weight * gamma;
+  }
+  return Math.max(0, s);
+}
+function normalCDF(x) {
+  const t = 1 / (1 + 0.2316419 * x);
+  const d = 0.3989422804014327;
+  const p = d * Math.exp(-x * x / 2) * (t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))));
+  return 1 - p;
+}
+
+// src/stats/split-rhat.ts
+function computeSplitRhat(chains) {
+  if (chains.length === 0) return void 0;
+  const splitChains = [];
+  for (const chain of chains) {
+    const half = Math.floor(chain.length / 2);
+    if (half < 2) return void 0;
+    splitChains.push(chain.slice(0, half));
+    splitChains.push(chain.slice(half, half * 2));
+  }
+  const m = splitChains.length;
+  if (m <= 1) return void 0;
+  const means = splitChains.map((c) => computeMean(c));
+  const sds = splitChains.map((c) => computeStdev(c));
+  const counts = splitChains.map((c) => c.length);
+  for (const c of counts) {
+    if (c <= 1) return void 0;
+  }
+  const n = counts.reduce((a, b) => a + b, 0) / m;
+  const grandMean = means.reduce((a, b) => a + b, 0) / m;
+  let B = 0;
+  for (let i = 0; i < m; i++) {
+    B += (means[i] - grandMean) ** 2;
+  }
+  B = n / (m - 1) * B;
+  let W = 0;
+  for (let i = 0; i < m; i++) {
+    W += sds[i] * sds[i] * counts[i] / (counts[i] - 1);
+  }
+  W /= m;
+  if (W === 0) return void 0;
+  const varHat = (n - 1) / n * W + B / n;
+  return Math.sqrt(varHat / W);
 }
 
 // src/exporters/index.ts
@@ -511,13 +746,24 @@ var MCMCData = class _MCMCData {
     const mean2 = computeMean(draws);
     const stdev2 = computeStdev(draws);
     const { ess, autocorrelation } = computeESS(draws);
-    return { mean: mean2, stdev: stdev2, count: draws.length, ess, autocorrelation };
+    return {
+      mean: mean2,
+      stdev: stdev2,
+      count: draws.length,
+      ess,
+      essPerDraw: draws.length > 0 ? ess / draws.length : NaN,
+      mcse: computeMCSE(draws),
+      skewness: computeSkewness(draws),
+      excessKurtosis: computeExcessKurtosis(draws),
+      autocorrelation
+    };
   }
   variableStats(variable) {
     const chainMeans = [];
     const chainStdevs = [];
     const chainCounts = [];
     let totalESS = 0;
+    const chainDraws = [];
     for (const chainName of this.chainNames) {
       const chain = this.chains.get(chainName);
       const draws = chain.draws.get(variable);
@@ -528,20 +774,35 @@ var MCMCData = class _MCMCData {
       chainMeans.push(m);
       chainStdevs.push(isNaN(s) ? 0 : s);
       chainCounts.push(draws.length);
+      chainDraws.push(draws);
       totalESS += ess;
     }
     const allDraws = this.getAllDraws(variable);
     const quantiles = computeQuantiles(allDraws);
     const hdi90 = computeHDI(allDraws, 0.9);
     const rhat = computeRhat(chainMeans, chainStdevs, chainCounts);
+    const mcse = computeMCSE(allDraws);
+    const bulkEss = computeBulkESS(chainDraws);
+    const tailEss = computeTailESS(chainDraws);
+    const splitRhat = computeSplitRhat(chainDraws);
+    const geweke = computeGeweke(allDraws);
     return {
       mean: computeMean(allDraws),
       stdev: computeStdev(allDraws),
       count: allDraws.length,
       ess: totalESS,
+      essPerDraw: allDraws.length > 0 ? totalESS / allDraws.length : NaN,
+      mcse,
+      bulkEss,
+      tailEss,
       rhat,
+      splitRhat,
+      geweke,
+      skewness: computeSkewness(allDraws),
+      excessKurtosis: computeExcessKurtosis(allDraws),
       quantiles,
-      hdi90
+      hdi90,
+      hdi90Width: hdi90[1] - hdi90[0]
     };
   }
   summary() {
@@ -822,12 +1083,20 @@ function isTuringCSVLong(lines) {
 var plots_exports = {};
 __export(plots_exports, {
   autocorrelationPlot: () => autocorrelationPlot,
+  chainIntervalsPlot: () => chainIntervalsPlot,
   cumulativeMeanPlot: () => cumulativeMeanPlot,
+  densityPlot: () => densityPlot,
+  diagnosticsHeatmapPlot: () => diagnosticsHeatmapPlot,
+  ecdfPlot: () => ecdfPlot,
+  energyPlot: () => energyPlot,
   forestPlot: () => forestPlot,
   histogramPlot: () => histogramPlot,
   pairPlot: () => pairPlot,
+  rankPlot: () => rankPlot,
+  runningRhatPlot: () => runningRhatPlot,
   summaryTable: () => summaryTable,
-  tracePlot: () => tracePlot
+  tracePlot: () => tracePlot,
+  violinPlot: () => violinPlot
 });
 
 // src/plots/types.ts
@@ -1176,31 +1445,57 @@ function summaryTable(container, data, options) {
   container.appendChild(wrapper);
   function render() {
     const summaries = data.summary();
-    const bg = isDark ? "#1a1d27" : "#f8f9fa";
     const headerBg = isDark ? "#252836" : "#e5e7eb";
     const borderColor = isDark ? "#333" : "#d1d5db";
     const textColor = isDark ? "#e0e0e0" : "#1a1a1a";
     const mutedColor = isDark ? "#888" : "#666";
+    const columns = [
+      "Variable",
+      "Mean",
+      "Std",
+      "MCSE",
+      "5%",
+      "25%",
+      "50%",
+      "75%",
+      "95%",
+      "ESS",
+      "Bulk ESS",
+      "Tail ESS",
+      "R\u0302",
+      "Split R\u0302",
+      "Geweke z",
+      "HDI 90%"
+    ];
     let html = `<table style="width:100%;border-collapse:collapse;font-size:13px;color:${textColor};font-family:system-ui,sans-serif">`;
     html += `<thead><tr style="background:${headerBg}">`;
-    for (const c of ["Variable", "Mean", "Std", "5%", "25%", "50%", "75%", "95%", "ESS", "R\u0302", "HDI 90%"]) {
+    for (const c of columns) {
       html += `<th style="padding:10px 14px;text-align:left;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:${mutedColor};white-space:nowrap">${c}</th>`;
     }
     html += "</tr></thead><tbody>";
     for (const s of summaries) {
       const rhatColor = s.rhat === void 0 ? mutedColor : s.rhat < 1.05 ? "#22c55e" : s.rhat < 1.1 ? "#eab308" : "#ef4444";
+      const splitRhatColor = s.splitRhat === void 0 ? mutedColor : s.splitRhat < 1.05 ? "#22c55e" : s.splitRhat < 1.1 ? "#eab308" : "#ef4444";
       const essColor = s.ess > 400 ? "#22c55e" : s.ess > 100 ? "#eab308" : "#ef4444";
+      const bulkEssColor = s.bulkEss > 400 ? "#22c55e" : s.bulkEss > 100 ? "#eab308" : "#ef4444";
+      const tailEssColor = s.tailEss > 400 ? "#22c55e" : s.tailEss > 100 ? "#eab308" : "#ef4444";
+      const gewekeColor = isNaN(s.geweke.z) ? mutedColor : Math.abs(s.geweke.z) < 1.96 ? "#22c55e" : Math.abs(s.geweke.z) < 2.58 ? "#eab308" : "#ef4444";
       html += `<tr style="border-bottom:1px solid ${borderColor}">`;
       html += `<td style="padding:8px 14px;font-weight:600">${s.variable}</td>`;
       html += td(s.mean, textColor);
       html += td(s.stdev, textColor);
+      html += td(s.mcse, textColor);
       html += td(s.quantiles.q5, textColor);
       html += td(s.quantiles.q25, textColor);
       html += td(s.quantiles.q50, textColor);
       html += td(s.quantiles.q75, textColor);
       html += td(s.quantiles.q95, textColor);
       html += `<td style="padding:8px 14px;color:${essColor};font-variant-numeric:tabular-nums">${Math.round(s.ess)}</td>`;
+      html += `<td style="padding:8px 14px;color:${bulkEssColor};font-variant-numeric:tabular-nums">${Math.round(s.bulkEss)}</td>`;
+      html += `<td style="padding:8px 14px;color:${tailEssColor};font-variant-numeric:tabular-nums">${Math.round(s.tailEss)}</td>`;
       html += `<td style="padding:8px 14px;color:${rhatColor};font-variant-numeric:tabular-nums">${s.rhat !== void 0 ? s.rhat.toFixed(3) : "\u2014"}</td>`;
+      html += `<td style="padding:8px 14px;color:${splitRhatColor};font-variant-numeric:tabular-nums">${s.splitRhat !== void 0 ? s.splitRhat.toFixed(3) : "\u2014"}</td>`;
+      html += `<td style="padding:8px 14px;color:${gewekeColor};font-variant-numeric:tabular-nums">${!isNaN(s.geweke.z) ? s.geweke.z.toFixed(3) : "\u2014"}</td>`;
       html += `<td style="padding:8px 14px;font-variant-numeric:tabular-nums;white-space:nowrap">[${s.hdi90[0].toFixed(3)}, ${s.hdi90[1].toFixed(3)}]</td>`;
       html += "</tr>";
     }
@@ -1212,6 +1507,572 @@ function summaryTable(container, data, options) {
 }
 function td(v, color) {
   return `<td style="padding:8px 14px;font-variant-numeric:tabular-nums;color:${color}">${isNaN(v) ? "\u2014" : v.toFixed(4)}</td>`;
+}
+
+// src/plots/rank.ts
+function rankPlot(container, data, variable, options) {
+  const Plotly = getPlotly();
+  let currentVar = variable;
+  function render() {
+    const allDraws = [];
+    const chainDraws = [];
+    for (const chain of data.chainNames) {
+      const d = data.getDraws(currentVar, chain);
+      chainDraws.push(d);
+      for (let i = 0; i < d.length; i++) allDraws.push(d[i]);
+    }
+    const sorted = [...allDraws].sort((a, b) => a - b);
+    const rankMap = /* @__PURE__ */ new Map();
+    for (let i = 0; i < sorted.length; i++) {
+      if (!rankMap.has(sorted[i])) rankMap.set(sorted[i], i + 1);
+    }
+    const nBins = 20;
+    const totalN = allDraws.length;
+    const traces = data.chainNames.map((chain, ci) => {
+      const draws = chainDraws[ci];
+      const ranks = [];
+      for (let i = 0; i < draws.length; i++) {
+        ranks.push(rankMap.get(draws[i]) / totalN);
+      }
+      return {
+        x: ranks,
+        type: "histogram",
+        name: chain,
+        nbinsx: nBins,
+        opacity: 0.6,
+        marker: { color: CHAIN_COLORS[ci % CHAIN_COLORS.length] }
+      };
+    });
+    const layout = {
+      ...getLayout(options),
+      title: { text: `Rank Histogram: ${currentVar}` },
+      barmode: "overlay",
+      xaxis: { ...getLayout(options).xaxis, title: "Normalized Rank" },
+      yaxis: { ...getLayout(options).yaxis, title: "Count" },
+      shapes: [{
+        type: "line",
+        x0: 0,
+        x1: 1,
+        y0: totalN / data.chainNames.length / nBins,
+        y1: totalN / data.chainNames.length / nBins,
+        line: { color: "#888", width: 1.5, dash: "dash" }
+      }]
+    };
+    Plotly.react(container, traces, layout, getConfig());
+  }
+  render();
+  return {
+    destroy: () => Plotly.purge(container),
+    update: (v) => {
+      if (v) currentVar = v;
+      render();
+    }
+  };
+}
+
+// src/plots/running-rhat.ts
+function runningRhatPlot(container, data, variable, options) {
+  const Plotly = getPlotly();
+  let currentVar = variable;
+  function render() {
+    const chains = data.chainNames.map((c) => data.getDraws(currentVar, c));
+    const minLen = Math.min(...chains.map((c) => c.length));
+    const step = Math.max(1, Math.floor(minLen / 200));
+    const startAt = Math.max(20, step);
+    const iterations = [];
+    const rhatValues = [];
+    for (let n = startAt; n <= minLen; n += step) {
+      const sliced = chains.map((c) => c.slice(0, n));
+      const means = sliced.map((c) => computeMean(c));
+      const sds = sliced.map((c) => computeStdev(c));
+      const counts = sliced.map((c) => c.length);
+      const rhat = computeRhatFromParts(means, sds, counts);
+      if (rhat !== void 0 && !isNaN(rhat)) {
+        iterations.push(n);
+        rhatValues.push(rhat);
+      }
+    }
+    const traces = [{
+      x: iterations,
+      y: rhatValues,
+      type: "scatter",
+      mode: "lines",
+      name: "R\u0302",
+      line: { width: 2, color: CHAIN_COLORS[0] }
+    }];
+    const layout = {
+      ...getLayout(options),
+      title: { text: `Running R\u0302: ${currentVar}` },
+      xaxis: { ...getLayout(options).xaxis, title: "Iteration" },
+      yaxis: { ...getLayout(options).yaxis, title: "R\u0302" },
+      shapes: [{
+        type: "line",
+        x0: iterations[0] ?? 0,
+        x1: iterations[iterations.length - 1] ?? 1,
+        y0: 1,
+        y1: 1,
+        line: { color: "#22c55e", width: 1, dash: "dash" }
+      }, {
+        type: "line",
+        x0: iterations[0] ?? 0,
+        x1: iterations[iterations.length - 1] ?? 1,
+        y0: 1.05,
+        y1: 1.05,
+        line: { color: "#ef4444", width: 1, dash: "dot" }
+      }]
+    };
+    Plotly.react(container, traces, layout, getConfig());
+  }
+  render();
+  return {
+    destroy: () => Plotly.purge(container),
+    update: (v) => {
+      if (v) currentVar = v;
+      render();
+    }
+  };
+}
+function computeRhatFromParts(chainMeans, chainStdevs, chainCounts) {
+  if (chainMeans.length <= 1) return void 0;
+  for (const c of chainCounts) {
+    if (c <= 1) return void 0;
+  }
+  const m = chainMeans.length;
+  const n = chainCounts.reduce((a, b) => a + b, 0) / m;
+  const grandMean = chainMeans.reduce((a, b) => a + b, 0) / m;
+  let B = 0;
+  for (let i = 0; i < m; i++) B += (chainMeans[i] - grandMean) ** 2;
+  B = n / (m - 1) * B;
+  let W = 0;
+  for (let i = 0; i < m; i++) {
+    W += chainStdevs[i] * chainStdevs[i] * chainCounts[i] / (chainCounts[i] - 1);
+  }
+  W /= m;
+  if (W === 0) return void 0;
+  return Math.sqrt((n - 1) / n * W / W + B / (n * W));
+}
+
+// src/plots/density.ts
+function densityPlot(container, data, variable, options) {
+  const Plotly = getPlotly();
+  let currentVar = variable;
+  function kde(values, nPoints = 200) {
+    const n = values.length;
+    if (n === 0) return { x: [], y: [] };
+    let min = values[0], max = values[0];
+    let mean2 = 0;
+    for (let i = 0; i < n; i++) {
+      if (values[i] < min) min = values[i];
+      if (values[i] > max) max = values[i];
+      mean2 += values[i];
+    }
+    mean2 /= n;
+    let variance = 0;
+    for (let i = 0; i < n; i++) variance += (values[i] - mean2) ** 2;
+    variance /= n;
+    const sd = Math.sqrt(variance);
+    const sortedCopy2 = new Float64Array(values);
+    sortedCopy2.sort();
+    const q25 = sortedCopy2[Math.floor(n * 0.25)];
+    const q75 = sortedCopy2[Math.floor(n * 0.75)];
+    const iqr = q75 - q25;
+    const h = 0.9 * Math.min(sd, iqr / 1.34) * Math.pow(n, -0.2);
+    if (h <= 0 || isNaN(h)) return { x: [], y: [] };
+    const pad = 3 * h;
+    const xMin = min - pad;
+    const xMax = max + pad;
+    const step = (xMax - xMin) / (nPoints - 1);
+    const x = [];
+    const y = [];
+    for (let i = 0; i < nPoints; i++) {
+      const xi = xMin + i * step;
+      let density = 0;
+      for (let j = 0; j < n; j++) {
+        const u = (xi - values[j]) / h;
+        density += Math.exp(-0.5 * u * u);
+      }
+      density /= n * h * Math.sqrt(2 * Math.PI);
+      x.push(xi);
+      y.push(density);
+    }
+    return { x, y };
+  }
+  function render() {
+    const traces = data.chainNames.map((chain, i) => {
+      const draws = data.getDraws(currentVar, chain);
+      const { x, y } = kde(draws);
+      return {
+        x,
+        y,
+        type: "scatter",
+        mode: "lines",
+        name: chain,
+        fill: "tozeroy",
+        fillcolor: CHAIN_COLORS[i % CHAIN_COLORS.length].replace(")", ",0.12)").replace("rgb", "rgba"),
+        line: { width: 2, color: CHAIN_COLORS[i % CHAIN_COLORS.length] }
+      };
+    });
+    const layout = {
+      ...getLayout(options),
+      title: { text: `Density: ${currentVar}` },
+      xaxis: { ...getLayout(options).xaxis, title: currentVar },
+      yaxis: { ...getLayout(options).yaxis, title: "Density" }
+    };
+    Plotly.react(container, traces, layout, getConfig());
+  }
+  render();
+  return {
+    destroy: () => Plotly.purge(container),
+    update: (v) => {
+      if (v) currentVar = v;
+      render();
+    }
+  };
+}
+
+// src/plots/violin.ts
+function violinPlot(container, data, options) {
+  const Plotly = getPlotly();
+  function render() {
+    const traces = data.variableNames.map((varName, vi) => {
+      const allDraws = Array.from(data.getAllDraws(varName));
+      return {
+        type: "violin",
+        y: allDraws,
+        name: varName,
+        box: { visible: true },
+        meanline: { visible: true },
+        line: { color: CHAIN_COLORS[vi % CHAIN_COLORS.length] },
+        fillcolor: CHAIN_COLORS[vi % CHAIN_COLORS.length].replace(")", ",0.3)").replace("rgb", "rgba"),
+        opacity: 0.85,
+        spanmode: "soft"
+      };
+    });
+    const layout = {
+      ...getLayout(options),
+      title: { text: "Violin Plot" },
+      yaxis: { ...getLayout(options).yaxis, title: "Value" },
+      showlegend: false,
+      height: Math.max(350, data.variableNames.length * 60 + 150)
+    };
+    Plotly.react(container, traces, layout, getConfig());
+  }
+  render();
+  return {
+    destroy: () => Plotly.purge(container),
+    update: () => render()
+  };
+}
+
+// src/plots/energy.ts
+function energyPlot(container, data, options) {
+  const Plotly = getPlotly();
+  function render() {
+    const hasEnergy = data.variableNames.some(
+      (v) => v === "energy__" || v === "energy" || v === "lp__" || v === "log_density"
+    );
+    const energyVar = ["energy__", "energy", "lp__", "log_density"].find((v) => data.variableNames.includes(v));
+    if (!energyVar) {
+      container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:200px;color:#5c6278;font-size:0.85rem;font-family:Inter,system-ui,sans-serif">
+        <div style="text-align:center">
+          <div style="font-size:1.5rem;margin-bottom:8px;opacity:0.4">&#9889;</div>
+          <div>No energy/log-density variable found</div>
+          <div style="font-size:0.75rem;margin-top:4px;opacity:0.6">Requires: energy__, energy, lp__, or log_density</div>
+        </div>
+      </div>`;
+      return;
+    }
+    const traces = [];
+    data.chainNames.forEach((chain, i) => {
+      const draws = Array.from(data.getDraws(energyVar, chain));
+      traces.push({
+        x: draws,
+        type: "histogram",
+        name: `${chain} (marginal)`,
+        opacity: 0.5,
+        marker: { color: CHAIN_COLORS[i % CHAIN_COLORS.length] },
+        histnorm: "probability density"
+      });
+      if (draws.length > 1) {
+        const transitions = [];
+        for (let j = 1; j < draws.length; j++) {
+          transitions.push(draws[j] - draws[j - 1]);
+        }
+        traces.push({
+          x: transitions,
+          type: "histogram",
+          name: `${chain} (transition)`,
+          opacity: 0.3,
+          marker: {
+            color: CHAIN_COLORS[i % CHAIN_COLORS.length],
+            line: { color: CHAIN_COLORS[i % CHAIN_COLORS.length], width: 1 }
+          },
+          histnorm: "probability density"
+        });
+      }
+    });
+    const layout = {
+      ...getLayout(options),
+      title: { text: `Energy: ${energyVar}` },
+      barmode: "overlay",
+      xaxis: { ...getLayout(options).xaxis, title: energyVar },
+      yaxis: { ...getLayout(options).yaxis, title: "Density" }
+    };
+    Plotly.react(container, traces, layout, getConfig());
+  }
+  render();
+  return {
+    destroy: () => Plotly.purge(container),
+    update: () => render()
+  };
+}
+
+// src/plots/ecdf.ts
+function ecdfPlot(container, data, variable, options) {
+  const Plotly = getPlotly();
+  let currentVar = variable;
+  function computeECDF(draws) {
+    const sorted = Array.from(draws).sort((a, b) => a - b);
+    const n = sorted.length;
+    return {
+      x: sorted,
+      y: sorted.map((_, i) => (i + 1) / n)
+    };
+  }
+  function render() {
+    const traces = data.chainNames.map((chain, i) => {
+      const { x, y } = computeECDF(data.getDraws(currentVar, chain));
+      return {
+        x,
+        y,
+        type: "scatter",
+        mode: "lines",
+        name: chain,
+        line: { width: 2, shape: "hv", color: CHAIN_COLORS[i % CHAIN_COLORS.length] }
+      };
+    });
+    const layout = {
+      ...getLayout(options),
+      title: { text: `Empirical CDF: ${currentVar}` },
+      xaxis: { ...getLayout(options).xaxis, title: currentVar },
+      yaxis: { ...getLayout(options).yaxis, title: "Cumulative Probability", range: [0, 1] }
+    };
+    Plotly.react(container, traces, layout, getConfig());
+  }
+  render();
+  return {
+    destroy: () => Plotly.purge(container),
+    update: (v) => {
+      if (v) currentVar = v;
+      render();
+    }
+  };
+}
+
+// src/plots/chain-intervals.ts
+function chainIntervalsPlot(container, data, variable, options) {
+  const Plotly = getPlotly();
+  let currentVar = variable;
+  function render() {
+    const chainSummaries = data.chainNames.map((chain, index) => {
+      const draws = data.getDraws(currentVar, chain);
+      const mean2 = computeMean(draws);
+      const hdi90 = computeHDI(draws, 0.9);
+      return {
+        chain,
+        mean: mean2,
+        hdi90,
+        color: CHAIN_COLORS[index % CHAIN_COLORS.length]
+      };
+    });
+    const overallStats = data.variableStats(currentVar);
+    const minX = Math.min(...chainSummaries.map((s) => s.hdi90[0]), overallStats.hdi90[0]);
+    const maxX = Math.max(...chainSummaries.map((s) => s.hdi90[1]), overallStats.hdi90[1]);
+    const traces = [{
+      x: chainSummaries.map((s) => s.mean),
+      y: chainSummaries.map((s) => s.chain),
+      type: "scatter",
+      mode: "markers",
+      name: "Chain mean",
+      marker: {
+        size: 11,
+        color: chainSummaries.map((s) => s.color),
+        line: { width: 1.5, color: "#ffffff" }
+      },
+      error_x: {
+        type: "data",
+        symmetric: false,
+        array: chainSummaries.map((s) => s.hdi90[1] - s.mean),
+        arrayminus: chainSummaries.map((s) => s.mean - s.hdi90[0]),
+        thickness: 2,
+        width: 0,
+        color: "#94a3b8"
+      },
+      customdata: chainSummaries.map((s) => [
+        s.hdi90[0].toFixed(3),
+        s.hdi90[1].toFixed(3)
+      ]),
+      hovertemplate: "%{y}<br>Mean=%{x:.3f}<br>90% HDI=[%{customdata[0]}, %{customdata[1]}]<extra></extra>"
+    }];
+    const layout = {
+      ...getLayout(options),
+      title: { text: `Chain Intervals: ${currentVar}` },
+      xaxis: {
+        ...getLayout(options).xaxis,
+        title: currentVar,
+        range: [minX, maxX]
+      },
+      yaxis: { ...getLayout(options).yaxis, automargin: true },
+      shapes: [
+        {
+          type: "rect",
+          x0: overallStats.hdi90[0],
+          x1: overallStats.hdi90[1],
+          yref: "paper",
+          y0: 0,
+          y1: 1,
+          fillcolor: options?.theme === "light" ? "rgba(14, 165, 233, 0.08)" : "rgba(56, 189, 248, 0.10)",
+          line: { width: 0 },
+          layer: "below"
+        },
+        {
+          type: "line",
+          x0: overallStats.mean,
+          x1: overallStats.mean,
+          yref: "paper",
+          y0: 0,
+          y1: 1,
+          line: { color: "#f59e0b", width: 2, dash: "dash" }
+        }
+      ],
+      annotations: [{
+        x: overallStats.mean,
+        y: 1.02,
+        yref: "paper",
+        text: `Overall mean ${overallStats.mean.toFixed(3)}`,
+        showarrow: false,
+        font: { size: 11, color: options?.theme === "light" ? "#92400e" : "#fbbf24" }
+      }]
+    };
+    Plotly.react(container, traces, layout, getConfig());
+  }
+  render();
+  return {
+    destroy: () => Plotly.purge(container),
+    update: (v) => {
+      if (v) currentVar = v;
+      render();
+    }
+  };
+}
+
+// src/plots/diagnostics-heatmap.ts
+function diagnosticsHeatmapPlot(container, data, options) {
+  const Plotly = getPlotly();
+  function render() {
+    const summaries = data.summary();
+    const metrics = [
+      {
+        label: "R-hat",
+        raw: (summary) => summary.rhat ?? NaN,
+        text: (summary) => formatValue(summary.rhat),
+        score: (summary) => scoreUpper(summary.rhat, 1.01, 1.1)
+      },
+      {
+        label: "Split R-hat",
+        raw: (summary) => summary.splitRhat ?? NaN,
+        text: (summary) => formatValue(summary.splitRhat),
+        score: (summary) => scoreUpper(summary.splitRhat, 1.01, 1.1)
+      },
+      {
+        label: "ESS / draw",
+        raw: (summary) => summary.essPerDraw,
+        text: (summary) => formatValue(summary.essPerDraw),
+        score: (summary) => scoreLower(summary.essPerDraw, 0.25, 0.05)
+      },
+      {
+        label: "Bulk ESS",
+        raw: (summary) => summary.bulkEss,
+        text: (summary) => integerValue(summary.bulkEss),
+        score: (summary) => scoreLower(summary.bulkEss, 400, 100)
+      },
+      {
+        label: "Tail ESS",
+        raw: (summary) => summary.tailEss,
+        text: (summary) => integerValue(summary.tailEss),
+        score: (summary) => scoreLower(summary.tailEss, 400, 100)
+      },
+      {
+        label: "MCSE / sd",
+        raw: (summary) => summary.stdev === 0 ? NaN : summary.mcse / summary.stdev,
+        text: (summary) => summary.stdev === 0 ? "0.000" : formatValue(summary.mcse / summary.stdev),
+        score: (summary) => scoreUpper(summary.stdev === 0 ? 0 : summary.mcse / summary.stdev, 0.02, 0.1)
+      },
+      {
+        label: "|Geweke z|",
+        raw: (summary) => Math.abs(summary.geweke.z),
+        text: (summary) => formatValue(Math.abs(summary.geweke.z)),
+        score: (summary) => scoreUpper(Math.abs(summary.geweke.z), 1.96, 3)
+      }
+    ];
+    const x = metrics.map((metric) => metric.label);
+    const y = summaries.map((summary) => summary.variable);
+    const z = summaries.map((summary) => metrics.map((metric) => metric.score(summary)));
+    const text = summaries.map((summary) => metrics.map((metric) => metric.text(summary)));
+    const customdata = summaries.map((summary) => metrics.map((metric) => metric.raw(summary)));
+    const layout = {
+      ...getLayout(options),
+      title: { text: "Diagnostics Heatmap" },
+      xaxis: { ...getLayout(options).xaxis, side: "top" },
+      yaxis: { ...getLayout(options).yaxis, automargin: true, autorange: "reversed" },
+      margin: { t: 70, r: 40, b: 40, l: 100 }
+    };
+    const trace = {
+      type: "heatmap",
+      x,
+      y,
+      z,
+      text,
+      customdata,
+      texttemplate: "%{text}",
+      textfont: { size: 11 },
+      colorscale: [
+        [0, "#10b981"],
+        [0.5, "#f59e0b"],
+        [1, "#ef4444"]
+      ],
+      zmin: 0,
+      zmax: 1,
+      colorbar: { title: "Risk", thickness: 10 },
+      hovertemplate: "%{y}<br>%{x}: %{text}<br>Risk score=%{z:.2f}<extra></extra>"
+    };
+    Plotly.react(container, [trace], layout, getConfig());
+  }
+  render();
+  return {
+    destroy: () => Plotly.purge(container),
+    update: () => render()
+  };
+}
+function clamp(value) {
+  if (!isFinite(value)) return 0.5;
+  return Math.max(0, Math.min(1, value));
+}
+function scoreUpper(value, good, bad) {
+  if (value === void 0 || !isFinite(value)) return 0.5;
+  return clamp((value - good) / (bad - good));
+}
+function scoreLower(value, good, bad) {
+  if (value === void 0 || !isFinite(value)) return 0.5;
+  return clamp((good - value) / (good - bad));
+}
+function formatValue(value) {
+  if (value === void 0 || !isFinite(value)) return "\u2014";
+  return value.toFixed(3);
+}
+function integerValue(value) {
+  if (value === void 0 || !isFinite(value)) return "\u2014";
+  return Math.round(value).toString();
 }
 
 // src/index.ts
@@ -1257,12 +2118,19 @@ function fromChainArrays(data) {
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   MCMCData,
+  computeBulkESS,
   computeESS,
+  computeExcessKurtosis,
+  computeGeweke,
   computeHDI,
+  computeMCSE,
   computeMean,
   computeQuantiles,
   computeRhat,
+  computeSkewness,
+  computeSplitRhat,
   computeStdev,
+  computeTailESS,
   detectFormat,
   fromAutoDetect,
   fromChainArrays,
