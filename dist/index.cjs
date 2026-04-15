@@ -18,32 +18,39 @@ var __copyProps = (to, from, except, desc) => {
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // src/index.ts
-var index_exports = {};
-__export(index_exports, {
+var src_exports = {};
+__export(src_exports, {
   MCMCData: () => MCMCData,
-  computeBulkESS: () => computeBulkESS,
   computeESS: () => computeESS,
+  computeEssBasic: () => computeEssBasic,
+  computeEssBulk: () => computeEssBulk,
+  computeEssTail: () => computeEssTail,
   computeExcessKurtosis: () => computeExcessKurtosis,
   computeGeweke: () => computeGeweke,
   computeHDI: () => computeHDI,
   computeMCSE: () => computeMCSE,
+  computeMCSEMultiChain: () => computeMCSEMultiChain,
+  computeMCSEQuantile: () => computeMCSEQuantile,
+  computeMCSEStd: () => computeMCSEStd,
   computeMean: () => computeMean,
   computeQuantiles: () => computeQuantiles,
   computeRhat: () => computeRhat,
   computeSkewness: () => computeSkewness,
   computeSplitRhat: () => computeSplitRhat,
   computeStdev: () => computeStdev,
-  computeTailESS: () => computeTailESS,
   detectFormat: () => detectFormat,
+  fromArviZJSON: () => fromArviZJSON,
   fromAutoDetect: () => fromAutoDetect,
   fromChainArrays: () => fromChainArrays,
   fromMCMCChainsJSON: () => fromMCMCChainsJSON,
   fromStanCSV: () => fromStanCSV,
   fromStanCSVFiles: () => fromStanCSVFiles,
   fromTuringCSV: () => fromTuringCSV,
+  parseArviZJSON: () => parseArviZJSON,
+  parseArviZJSONPosterior: () => parseArviZJSONPosterior,
   plots: () => plots_exports
 });
-module.exports = __toCommonJS(index_exports);
+module.exports = __toCommonJS(src_exports);
 
 // src/stats/fft.ts
 function transform(real, imag) {
@@ -163,98 +170,6 @@ function zeros(n) {
   return result;
 }
 
-// src/stats/ess.ts
-function computeESS(chain) {
-  if (chain.length < 4) return { ess: 0, autocorrelation: [] };
-  const acor = autocorrFFT(chain, chain.length);
-  const n = firstNegPairStart(acor);
-  let prevMin = 1;
-  let accum = 0;
-  let i = 1;
-  while (i + 1 < n) {
-    prevMin = Math.min(prevMin, acor[i] + acor[i + 1]);
-    accum += prevMin;
-    i += 2;
-  }
-  const sigmaSqHat = acor[0] + 2 * accum;
-  const ess = chain.length / sigmaSqHat;
-  return {
-    ess,
-    autocorrelation: acor.map((v) => Number.isNaN(v) ? 0 : v)
-  };
-}
-function autocorrFFT(chain, n) {
-  const size = Math.round(Math.pow(2, Math.ceil(Math.log2(2 * chain.length - 1))));
-  const variance = computeVariance(chain);
-  if (variance === void 0 || variance === 0) return [];
-  const mean2 = computeMeanF64(chain);
-  const ndata = new Array(size).fill(0);
-  for (let i = 0; i < chain.length; i++) {
-    ndata[i] = chain[i] - mean2;
-  }
-  const ndataImag = new Array(size).fill(0);
-  transform(ndata, ndataImag);
-  const pwr = ndata.map((r, i) => r * r + ndataImag[i] * ndataImag[i]);
-  const acorrImag = new Array(pwr.length).fill(0);
-  inverseTransform(pwr, acorrImag);
-  return pwr.slice(0, n).map((x) => x / variance / ndata.length / chain.length);
-}
-function firstNegPairStart(chain) {
-  const N = chain.length;
-  let n = 0;
-  while (n + 1 < N) {
-    if (chain[n] + chain[n + 1] < 0) return n;
-    n++;
-  }
-  return N;
-}
-function computeMeanF64(arr) {
-  let sum = 0;
-  for (let i = 0; i < arr.length; i++) sum += arr[i];
-  return sum / arr.length;
-}
-function computeVariance(arr) {
-  if (arr.length === 0) return void 0;
-  const mean2 = computeMeanF64(arr);
-  let sum = 0;
-  for (let i = 0; i < arr.length; i++) {
-    const d = arr[i] - mean2;
-    sum += d * d;
-  }
-  return sum / arr.length;
-}
-
-// src/stats/rhat.ts
-function computeRhat(chainMeans, chainStdevs, chainCounts) {
-  if (chainMeans.length <= 1) return void 0;
-  for (const c of chainCounts) {
-    if (c <= 1) return void 0;
-  }
-  const m = chainMeans.length;
-  const meanChainLength = mean(chainCounts);
-  if (meanChainLength === void 0) return void 0;
-  const vars = chainStdevs.map((s, i) => s * s * chainCounts[i] / (chainCounts[i] - 1));
-  const stdevOfMeans = stdev(chainMeans);
-  if (stdevOfMeans === void 0) return void 0;
-  const varOfMeans = stdevOfMeans * stdevOfMeans * m / (m - 1);
-  const meanOfVars = mean(vars);
-  if (meanOfVars === void 0 || meanOfVars === 0) return void 0;
-  return Math.sqrt((meanChainLength - 1) / meanChainLength + varOfMeans / meanOfVars);
-}
-function mean(arr) {
-  if (arr.length === 0) return void 0;
-  let sum = 0;
-  for (const v of arr) sum += v;
-  return sum / arr.length;
-}
-function stdev(arr) {
-  if (arr.length <= 1) return void 0;
-  const m = mean(arr);
-  let sumsq = 0;
-  for (const v of arr) sumsq += v * v;
-  return Math.sqrt(sumsq / arr.length - m * m);
-}
-
 // src/utils.ts
 function parseCSVLine(line) {
   const fields = [];
@@ -288,6 +203,7 @@ function parseCSVLine(line) {
 function splitLines(text) {
   return text.split(/\r?\n/).filter((line) => line.trim().length > 0);
 }
+var computeQuantile = quantile;
 function quantile(sorted, q) {
   if (sorted.length === 0) return NaN;
   if (sorted.length === 1) return sorted[0];
@@ -318,146 +234,8 @@ function toStanName(name) {
   return `${m[1]}.${m[2].replace(/,/g, ".")}`;
 }
 
-// src/stats/summary.ts
-function computeMean(arr) {
-  if (arr.length === 0) return NaN;
-  let sum = 0;
-  for (let i = 0; i < arr.length; i++) sum += arr[i];
-  return sum / arr.length;
-}
-function computeStdev(arr) {
-  if (arr.length <= 1) return NaN;
-  const m = computeMean(arr);
-  let sumsq = 0;
-  for (let i = 0; i < arr.length; i++) sumsq += arr[i] * arr[i];
-  return Math.sqrt(sumsq / arr.length - m * m);
-}
-function computeSkewness(arr) {
-  if (arr.length < 3) return NaN;
-  const mean2 = computeMean(arr);
-  const sd = computeStdev(arr);
-  if (!isFinite(sd) || sd === 0) return 0;
-  let thirdMoment = 0;
-  for (let i = 0; i < arr.length; i++) {
-    thirdMoment += (arr[i] - mean2) ** 3;
-  }
-  return thirdMoment / arr.length / sd ** 3;
-}
-function computeExcessKurtosis(arr) {
-  if (arr.length < 4) return NaN;
-  const mean2 = computeMean(arr);
-  const sd = computeStdev(arr);
-  if (!isFinite(sd) || sd === 0) return 0;
-  let fourthMoment = 0;
-  for (let i = 0; i < arr.length; i++) {
-    fourthMoment += (arr[i] - mean2) ** 4;
-  }
-  return fourthMoment / arr.length / sd ** 4 - 3;
-}
-function computeQuantiles(arr) {
-  const sorted = sortedCopy(arr);
-  return {
-    q5: quantile(sorted, 0.05),
-    q25: quantile(sorted, 0.25),
-    q50: quantile(sorted, 0.5),
-    q75: quantile(sorted, 0.75),
-    q95: quantile(sorted, 0.95)
-  };
-}
-function computeHDI(arr, credMass = 0.9) {
-  const sorted = sortedCopy(arr);
-  const n = sorted.length;
-  const intervalSize = Math.ceil(credMass * n);
-  if (intervalSize >= n) return [sorted[0], sorted[n - 1]];
-  let bestWidth = Infinity;
-  let bestLo = 0;
-  for (let i = 0; i <= n - intervalSize; i++) {
-    const width = sorted[i + intervalSize - 1] - sorted[i];
-    if (width < bestWidth) {
-      bestWidth = width;
-      bestLo = i;
-    }
-  }
-  return [sorted[bestLo], sorted[bestLo + intervalSize - 1]];
-}
-
-// src/stats/mcse.ts
-function computeMCSE(draws) {
-  if (draws.length < 4) return NaN;
-  const sd = computeStdev(draws);
-  const { ess } = computeESS(draws);
-  if (ess <= 0 || isNaN(sd)) return NaN;
-  return sd / Math.sqrt(ess);
-}
-function computeBulkESS(chains) {
-  if (chains.length === 0) return 0;
-  const ranked = rankNormalize(chains);
-  return computeMultiChainESS(ranked);
-}
-function computeTailESS(chains) {
-  if (chains.length === 0) return 0;
-  const all = concatChains(chains);
-  const q05 = computeQuantiles(all).q5;
-  const q95 = computeQuantiles(all).q95;
-  const indicators = chains.map((chain) => {
-    const ind = new Float64Array(chain.length);
-    for (let i = 0; i < chain.length; i++) {
-      ind[i] = chain[i] <= q05 || chain[i] >= q95 ? 1 : 0;
-    }
-    return ind;
-  });
-  return computeMultiChainESS(indicators);
-}
-function rankNormalize(chains) {
-  const all = concatChains(chains);
-  const sorted = sortedCopy(all);
-  const n = all.length;
-  const rankMap = new Float64Array(n);
-  for (let i = 0; i < n; i++) {
-    let lo = 0, hi = n - 1;
-    while (lo < hi) {
-      const mid = lo + hi >> 1;
-      if (sorted[mid] < all[i]) lo = mid + 1;
-      else hi = mid;
-    }
-    let count = 1;
-    while (lo + count < n && sorted[lo + count] === sorted[lo]) count++;
-    rankMap[i] = (lo + (lo + count - 1)) / 2 + 1;
-  }
-  const result = [];
-  let offset = 0;
-  for (const chain of chains) {
-    const ranked = new Float64Array(chain.length);
-    for (let i = 0; i < chain.length; i++) {
-      const r = rankMap[offset + i];
-      const p = (r - 0.375) / (n + 0.25);
-      ranked[i] = normalQuantile(p);
-    }
-    result.push(ranked);
-    offset += chain.length;
-  }
-  return result;
-}
-function computeMultiChainESS(chains) {
-  let totalESS = 0;
-  for (const chain of chains) {
-    const { ess } = computeESS(chain);
-    totalESS += ess;
-  }
-  return totalESS;
-}
-function concatChains(chains) {
-  let len = 0;
-  for (const c of chains) len += c.length;
-  const result = new Float64Array(len);
-  let offset = 0;
-  for (const c of chains) {
-    result.set(c, offset);
-    offset += c.length;
-  }
-  return result;
-}
-function normalQuantile(p) {
+// src/stats/math.ts
+function _norminvcdf(p) {
   if (p <= 0) return -Infinity;
   if (p >= 1) return Infinity;
   if (p === 0.5) return 0;
@@ -491,19 +269,473 @@ function normalQuantile(p) {
     3.754408661907416
   ];
   const pLow = 0.02425;
-  const pHigh = 1 - pLow;
-  let q;
   if (p < pLow) {
-    q = Math.sqrt(-2 * Math.log(p));
-    return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
-  } else if (p <= pHigh) {
-    q = p - 0.5;
-    const r = q * q;
-    return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
-  } else {
-    q = Math.sqrt(-2 * Math.log(1 - p));
-    return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+    const q2 = Math.sqrt(-2 * Math.log(p));
+    return (((((c[0] * q2 + c[1]) * q2 + c[2]) * q2 + c[3]) * q2 + c[4]) * q2 + c[5]) / ((((d[0] * q2 + d[1]) * q2 + d[2]) * q2 + d[3]) * q2 + 1);
   }
+  if (p <= 1 - pLow) {
+    const q2 = p - 0.5, r = q2 * q2;
+    return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q2 / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+  }
+  const q = Math.sqrt(-2 * Math.log(1 - p));
+  return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+}
+function _betainvcdf(p, a, b) {
+  if (p <= 0) return 0;
+  if (p >= 1) return 1;
+  let x = _betaInitGuess(p, a, b);
+  for (let iter = 0; iter < 64; iter++) {
+    const fx = _betainc(x, a, b) - p;
+    const dfx = _betaPDF(x, a, b);
+    if (dfx === 0 || !isFinite(dfx)) break;
+    const d2fx = dfx * ((a - 1) / x - (b - 1) / (1 - x));
+    const step = fx / (dfx * (1 - fx * d2fx / (2 * dfx * dfx)));
+    x = Math.max(1e-15, Math.min(1 - 1e-15, x - step));
+    if (Math.abs(step) < 1e-12 * x) break;
+  }
+  return x;
+}
+function _betaInitGuess(p, a, b) {
+  const mean = a / (a + b);
+  const v = a * b / ((a + b) ** 2 * (a + b + 1));
+  return Math.max(1e-6, Math.min(1 - 1e-6, mean + Math.sqrt(v) * _norminvcdf(p)));
+}
+function _betaPDF(x, a, b) {
+  if (x <= 0 || x >= 1) return 0;
+  return Math.exp((a - 1) * Math.log(x) + (b - 1) * Math.log(1 - x) - _logBeta(a, b));
+}
+function _betainc(x, a, b) {
+  return x < (a + 1) / (a + b + 2) ? _betaincCF(x, a, b) : 1 - _betaincCF(1 - x, b, a);
+}
+function _betaincCF(x, a, b) {
+  const FPMIN = 1e-300;
+  const lbeta = _logBeta(a, b);
+  const qab = a + b, qap = a + 1, qam = a - 1;
+  let c = 1, d = 1 - qab * x / qap;
+  if (Math.abs(d) < FPMIN) d = FPMIN;
+  d = 1 / d;
+  let h = d;
+  for (let m = 1; m <= 200; m++) {
+    const m2 = 2 * m;
+    let aa = m * (b - m) * x / ((qam + m2) * (a + m2));
+    d = 1 + aa * d;
+    if (Math.abs(d) < FPMIN) d = FPMIN;
+    c = 1 + aa / c;
+    if (Math.abs(c) < FPMIN) c = FPMIN;
+    d = 1 / d;
+    h *= d * c;
+    aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2));
+    d = 1 + aa * d;
+    if (Math.abs(d) < FPMIN) d = FPMIN;
+    c = 1 + aa / c;
+    if (Math.abs(c) < FPMIN) c = FPMIN;
+    d = 1 / d;
+    const delta = d * c;
+    h *= delta;
+    if (Math.abs(delta - 1) < 3e-14) break;
+  }
+  return Math.exp(a * Math.log(x) + b * Math.log(1 - x) - lbeta) * h / a;
+}
+function _logBeta(a, b) {
+  return _logGamma(a) + _logGamma(b) - _logGamma(a + b);
+}
+function _logGamma(x) {
+  const c = [
+    76.18009172947146,
+    -86.50532032941678,
+    24.01409824083091,
+    -1.231739572450155,
+    0.001208650973866179,
+    -5395239384953e-18
+  ];
+  let y = x, tmp = x + 5.5;
+  tmp -= (x + 0.5) * Math.log(tmp);
+  let ser = 1.000000000190015;
+  for (const ci of c) {
+    y += 1;
+    ser += ci / y;
+  }
+  return -tmp + Math.log(2.5066282746310007 * ser / x);
+}
+function _nextPow2(n) {
+  let p = 1;
+  while (p < n) p <<= 1;
+  return p;
+}
+
+// src/stats/rhat.ts
+function computeRhat(chains, kind = "rank") {
+  if (chains.length < 2) return NaN;
+  switch (kind) {
+    case "basic":
+      return _rhatBasic(chains);
+    case "bulk":
+      return _rhatBasic(_rankNormalize(chains));
+    case "tail":
+      return _rhatBasic(_rankNormalize(_foldAroundMedian(chains)));
+    case "rank": {
+      const bulk = _rhatBasic(_rankNormalize(chains));
+      const tail = _rhatBasic(_rankNormalize(_foldAroundMedian(chains)));
+      if (isNaN(bulk) && isNaN(tail)) return NaN;
+      if (isNaN(bulk)) return tail;
+      if (isNaN(tail)) return bulk;
+      return Math.max(bulk, tail);
+    }
+  }
+}
+function _rhatBasic(chains, splitN = 2) {
+  const splits = _splitChains(chains, splitN);
+  const m = splits.length;
+  if (m < 2) return NaN;
+  const n = splits[0].length;
+  if (n < 3) return NaN;
+  const chainMeans = splits.map(_mean);
+  const chainVars = splits.map((c, i) => _biasedVariance(c, chainMeans[i]));
+  const W = _arrayMean(chainVars);
+  if (!isFinite(W) || W === 0) return NaN;
+  const grandMean = _arrayMean(chainMeans);
+  let bSum = 0;
+  for (let i = 0; i < m; i++) bSum += (chainMeans[i] - grandMean) ** 2;
+  const B = n / (m - 1) * bSum;
+  const varPlus = (n - 1) / n * W + B / n;
+  return Math.sqrt(varPlus / W);
+}
+function _rankNormalize(chains) {
+  const total = chains.reduce((a, c) => a + c.length, 0);
+  const pooled = new Float64Array(total);
+  let offset = 0;
+  for (const c of chains) {
+    pooled.set(c, offset);
+    offset += c.length;
+  }
+  const order = Array.from({ length: total }, (_, i2) => i2);
+  order.sort((a, b) => pooled[a] - pooled[b]);
+  const ranks = new Float64Array(total);
+  let i = 0;
+  while (i < total) {
+    let j = i;
+    while (j + 1 < total && pooled[order[j]] === pooled[order[j + 1]]) j++;
+    const avg = (i + j) / 2 + 1;
+    for (let k = i; k <= j; k++) ranks[order[k]] = avg;
+    i = j + 1;
+  }
+  const out = new Float64Array(total);
+  for (let idx = 0; idx < total; idx++) {
+    out[idx] = _norminvcdf((ranks[idx] - 0.375) / (total + 0.25));
+  }
+  const result = [];
+  offset = 0;
+  for (const c of chains) {
+    result.push(out.slice(offset, offset + c.length));
+    offset += c.length;
+  }
+  return result;
+}
+function _foldAroundMedian(chains) {
+  const total = chains.reduce((a, c) => a + c.length, 0);
+  const pooled = new Float64Array(total);
+  let offset = 0;
+  for (const c of chains) {
+    pooled.set(c, offset);
+    offset += c.length;
+  }
+  const median = computeQuantile(sortedCopy(pooled), 0.5);
+  return chains.map((c) => {
+    const f = new Float64Array(c.length);
+    for (let i = 0; i < c.length; i++) f[i] = Math.abs(c[i] - median);
+    return f;
+  });
+}
+function _splitChains(chains, splitN = 2) {
+  const result = [];
+  for (const chain of chains) {
+    const nIter = Math.floor(chain.length / splitN);
+    if (nIter < 3) continue;
+    const extra = chain.length % splitN;
+    let cursor = 0;
+    for (let s = 0; s < splitN; s++) {
+      result.push(chain.slice(cursor, cursor + nIter));
+      cursor += nIter + (s < extra ? 1 : 0);
+    }
+  }
+  return result;
+}
+function _mean(arr) {
+  if (arr.length === 0) return NaN;
+  let s = 0;
+  for (let i = 0; i < arr.length; i++) s += arr[i];
+  return s / arr.length;
+}
+function _biasedVariance(arr, mean) {
+  if (arr.length < 2) return NaN;
+  let ss = 0;
+  for (let i = 0; i < arr.length; i++) ss += (arr[i] - mean) ** 2;
+  return ss / arr.length;
+}
+function _arrayMean(arr) {
+  if (arr.length === 0) return NaN;
+  let s = 0;
+  for (const v of arr) s += v;
+  return s / arr.length;
+}
+
+// src/stats/ess.ts
+function computeESS(chain) {
+  if (chain.length < 4) return { ess: 0, autocorrelation: [] };
+  const acor = _autocorrFFT(chain, chain.length);
+  if (acor.length === 0) return { ess: 0, autocorrelation: [] };
+  const n = _firstNegPairStart(acor);
+  let prev = 1, acc = 0, i = 1;
+  while (i + 1 < n) {
+    prev = Math.min(prev, acor[i] + acor[i + 1]);
+    acc += prev;
+    i += 2;
+  }
+  const ess = chain.length / (acor[0] + 2 * acc);
+  return { ess, autocorrelation: acor.map((v) => Number.isNaN(v) ? 0 : v) };
+}
+function computeEssBulk(chains) {
+  if (chains.length < 2) return NaN;
+  return _essBasic(_rankNormalize(chains));
+}
+function computeEssTail(chains, tailProb = 0.1) {
+  if (chains.length < 2) return NaN;
+  const total = chains.reduce((a, c) => a + c.length, 0);
+  const pooled = new Float64Array(total);
+  let offset = 0;
+  for (const c of chains) {
+    pooled.set(c, offset);
+    offset += c.length;
+  }
+  const sorted = sortedCopy(pooled);
+  const ql = computeQuantile(sorted, tailProb / 2);
+  const qu = computeQuantile(sorted, 1 - tailProb / 2);
+  const lower = chains.map((c) => {
+    const ind = new Float64Array(c.length);
+    for (let i = 0; i < c.length; i++) ind[i] = c[i] <= ql ? 1 : 0;
+    return ind;
+  });
+  const upper = chains.map((c) => {
+    const ind = new Float64Array(c.length);
+    for (let i = 0; i < c.length; i++) ind[i] = c[i] >= qu ? 1 : 0;
+    return ind;
+  });
+  const lo = _essBasic(lower), hi = _essBasic(upper);
+  if (isNaN(lo) && isNaN(hi)) return NaN;
+  if (isNaN(lo)) return hi;
+  if (isNaN(hi)) return lo;
+  return Math.min(lo, hi);
+}
+function computeEssBasic(chains) {
+  return _essBasic(chains);
+}
+function _essBasic(chains, splitN = 2) {
+  const splits = _splitChains(chains, splitN);
+  const m = splits.length;
+  if (m < 2) return NaN;
+  const n = splits[0].length;
+  if (n < 4) return NaN;
+  const ntotal = m * n;
+  const chainMeans = splits.map(_mean);
+  const chainVars = splits.map((c, i) => _biasedVariance(c, chainMeans[i]));
+  const W = _arrayMean(chainVars);
+  if (!isFinite(W) || W === 0) return NaN;
+  const grandMean = _arrayMean(chainMeans);
+  let bSum = 0;
+  for (let i = 0; i < m; i++) bSum += (chainMeans[i] - grandMean) ** 2;
+  const B = n / (m - 1) * bSum;
+  const varPlus = (n - 1) / n * W + B / n;
+  if (!isFinite(varPlus) || varPlus === 0) return NaN;
+  const invV = 1 / varPlus;
+  const centered = splits.map((c, i) => {
+    const mu = chainMeans[i], out = new Float64Array(c.length);
+    for (let j = 0; j < c.length; j++) out[j] = c[j] - mu;
+    return out;
+  });
+  const autocovs = centered.map(_chainAutocovFFT);
+  const meanCov = (k2) => {
+    let s = 0;
+    for (let i = 0; i < m; i++) s += autocovs[i][k2] ?? 0;
+    return s / m;
+  };
+  const maxlag = Math.min(n - 4, 250);
+  let rhoOdd = 1 - invV * (W - meanCov(1));
+  let pT = 1 + rhoOdd, sumPT = pT;
+  let k = 2;
+  while (k < maxlag - 1) {
+    const rhoEven = 1 - invV * (W - meanCov(k));
+    rhoOdd = 1 - invV * (W - meanCov(k + 1));
+    const delta = rhoEven + rhoOdd;
+    if (delta <= 0) break;
+    pT = Math.min(delta, pT);
+    sumPT += pT;
+    k += 2;
+  }
+  const rhoFinal = maxlag > 1 ? 1 - invV * (W - meanCov(k)) : 0;
+  const tau = Math.max(0, 2 * sumPT + Math.max(0, rhoFinal) - 1);
+  if (!isFinite(tau) || tau <= 0) return NaN;
+  return Math.min(1 / tau, Math.log10(ntotal)) * ntotal;
+}
+function _chainAutocovFFT(centred) {
+  const n = centred.length;
+  const size = _nextPow2(2 * n - 1);
+  const real = new Array(size).fill(0);
+  const imag = new Array(size).fill(0);
+  for (let i = 0; i < n; i++) real[i] = centred[i];
+  transform(real, imag);
+  const pwr = real.map((r, i) => r * r + imag[i] * imag[i]);
+  const pwrImag = new Array(pwr.length).fill(0);
+  inverseTransform(pwr, pwrImag);
+  const scale = size * n;
+  const out = new Float64Array(n);
+  for (let k = 0; k < n; k++) out[k] = pwr[k] / scale;
+  return out;
+}
+function _autocorrFFT(chain, n) {
+  const size = _nextPow2(2 * chain.length - 1);
+  let mu = 0, variance = 0;
+  for (let i = 0; i < chain.length; i++) mu += chain[i];
+  mu /= chain.length;
+  for (let i = 0; i < chain.length; i++) variance += (chain[i] - mu) ** 2;
+  variance /= chain.length;
+  if (!isFinite(variance) || variance === 0) return [];
+  const real = new Array(size).fill(0);
+  const imag = new Array(size).fill(0);
+  for (let i = 0; i < chain.length; i++) real[i] = chain[i] - mu;
+  transform(real, imag);
+  const pwr = real.map((r, i) => r * r + imag[i] * imag[i]);
+  const pwrImag = new Array(pwr.length).fill(0);
+  inverseTransform(pwr, pwrImag);
+  return pwr.slice(0, n).map((x) => x / variance / size / chain.length);
+}
+function _firstNegPairStart(arr) {
+  let i = 0;
+  while (i + 1 < arr.length) {
+    if (arr[i] + arr[i + 1] < 0) return i;
+    i++;
+  }
+  return arr.length;
+}
+
+// src/stats/summary.ts
+function computeMean(arr) {
+  if (arr.length === 0) return NaN;
+  let sum = 0;
+  for (let i = 0; i < arr.length; i++) sum += arr[i];
+  return sum / arr.length;
+}
+function computeStdev(arr) {
+  if (arr.length <= 1) return NaN;
+  const m = computeMean(arr);
+  let sumsq = 0;
+  for (let i = 0; i < arr.length; i++) sumsq += arr[i] * arr[i];
+  return Math.sqrt(sumsq / arr.length - m * m);
+}
+function computeSkewness(arr) {
+  if (arr.length < 3) return NaN;
+  const mean = computeMean(arr);
+  const sd = computeStdev(arr);
+  if (!isFinite(sd) || sd === 0) return 0;
+  let thirdMoment = 0;
+  for (let i = 0; i < arr.length; i++) {
+    thirdMoment += (arr[i] - mean) ** 3;
+  }
+  return thirdMoment / arr.length / sd ** 3;
+}
+function computeExcessKurtosis(arr) {
+  if (arr.length < 4) return NaN;
+  const mean = computeMean(arr);
+  const sd = computeStdev(arr);
+  if (!isFinite(sd) || sd === 0) return 0;
+  let fourthMoment = 0;
+  for (let i = 0; i < arr.length; i++) {
+    fourthMoment += (arr[i] - mean) ** 4;
+  }
+  return fourthMoment / arr.length / sd ** 4 - 3;
+}
+function computeQuantiles(arr) {
+  const sorted = sortedCopy(arr);
+  return {
+    q5: quantile(sorted, 0.05),
+    q25: quantile(sorted, 0.25),
+    q50: quantile(sorted, 0.5),
+    q75: quantile(sorted, 0.75),
+    q95: quantile(sorted, 0.95)
+  };
+}
+function computeHDI(arr, credMass = 0.9) {
+  const sorted = sortedCopy(arr);
+  const n = sorted.length;
+  const intervalSize = Math.ceil(credMass * n);
+  if (intervalSize >= n) return [sorted[0], sorted[n - 1]];
+  let bestWidth = Infinity;
+  let bestLo = 0;
+  for (let i = 0; i <= n - intervalSize; i++) {
+    const width = sorted[i + intervalSize - 1] - sorted[i];
+    if (width < bestWidth) {
+      bestWidth = width;
+      bestLo = i;
+    }
+  }
+  return [sorted[bestLo], sorted[bestLo + intervalSize - 1]];
+}
+
+// src/stats/mcse.ts
+function computeMCSE(draws) {
+  if (draws.length < 4) return NaN;
+  const sd = computeStdev(draws), { ess } = computeESS(draws);
+  if (!isFinite(sd) || !isFinite(ess) || ess <= 0) return NaN;
+  return sd / Math.sqrt(ess);
+}
+function computeMCSEMultiChain(chains) {
+  if (chains.length === 0) return NaN;
+  const all = _concat(chains);
+  const sd = computeStdev(all);
+  if (!isFinite(sd)) return NaN;
+  const ess = computeEssBulk(chains);
+  if (!isFinite(ess) || ess <= 0) return computeMCSE(all);
+  return sd / Math.sqrt(ess);
+}
+function computeMCSEQuantile(draws, p, essEff) {
+  if (!isFinite(essEff) || essEff <= 0 || draws.length < 4) return NaN;
+  const S = draws.length;
+  const \u03B1 = essEff * p + 1, \u03B2 = essEff * (1 - p) + 1;
+  const probU = _betainvcdf(0.8413447460685429, \u03B1, \u03B2);
+  const probL = _betainvcdf(0.1586552539314571, \u03B1, \u03B2);
+  const sorted = sortedCopy(draws);
+  const xl = sorted[Math.max(Math.floor(probL * S), 0)];
+  const xu = sorted[Math.min(Math.ceil(probU * S), S - 1)];
+  return (xu - xl) / 2;
+}
+function computeMCSEStd(chains) {
+  if (chains.length === 0) return NaN;
+  const all = _concat(chains);
+  const mu = computeMean(all);
+  if (!isFinite(mu)) return NaN;
+  const proxyChains = chains.map((c) => {
+    const pc = new Float64Array(c.length);
+    for (let i = 0; i < c.length; i++) pc[i] = (c[i] - mu) ** 2;
+    return pc;
+  });
+  const proxy = _concat(proxyChains);
+  const meanV = computeMean(proxy);
+  let meanM4 = 0;
+  for (let i = 0; i < proxy.length; i++) meanM4 += proxy[i] ** 2;
+  meanM4 /= proxy.length;
+  const ess = computeEssBulk(proxyChains);
+  if (!isFinite(ess) || ess <= 0 || meanV <= 0) return NaN;
+  return Math.sqrt((meanM4 / meanV - meanV) / ess) / 2;
+}
+function _concat(chains) {
+  let len = 0;
+  for (const c of chains) len += c.length;
+  const out = new Float64Array(len);
+  let offset = 0;
+  for (const c of chains) {
+    out.set(c, offset);
+    offset += c.length;
+  }
+  return out;
 }
 
 // src/stats/geweke.ts
@@ -526,19 +758,19 @@ function computeGeweke(draws, firstFrac = 0.1, lastFrac = 0.5) {
 }
 function spectralDensityAt0(draws) {
   const n = draws.length;
-  const mean2 = computeMean(draws);
+  const mean = computeMean(draws);
   const sd = computeStdev(draws);
   if (isNaN(sd) || sd === 0) return 0;
   const maxLag = Math.min(n - 1, Math.floor(n * 0.2));
   let gamma0 = 0;
-  for (let i = 0; i < n; i++) gamma0 += (draws[i] - mean2) ** 2;
+  for (let i = 0; i < n; i++) gamma0 += (draws[i] - mean) ** 2;
   gamma0 /= n;
   let s = gamma0;
   for (let lag = 1; lag <= maxLag; lag++) {
     const weight = 1 - lag / (maxLag + 1);
     let gamma = 0;
     for (let i = 0; i < n - lag; i++) {
-      gamma += (draws[i] - mean2) * (draws[i + lag] - mean2);
+      gamma += (draws[i] - mean) * (draws[i + lag] - mean);
     }
     gamma /= n;
     s += 2 * weight * gamma;
@@ -743,12 +975,12 @@ var MCMCData = class _MCMCData {
   }
   sequenceStats(variable, chain) {
     const draws = this.getDraws(variable, chain);
-    const mean2 = computeMean(draws);
-    const stdev2 = computeStdev(draws);
+    const mean = computeMean(draws);
+    const stdev = computeStdev(draws);
     const { ess, autocorrelation } = computeESS(draws);
     return {
-      mean: mean2,
-      stdev: stdev2,
+      mean,
+      stdev,
       count: draws.length,
       ess,
       essPerDraw: draws.length > 0 ? ess / draws.length : NaN,
@@ -780,10 +1012,12 @@ var MCMCData = class _MCMCData {
     const allDraws = this.getAllDraws(variable);
     const quantiles = computeQuantiles(allDraws);
     const hdi90 = computeHDI(allDraws, 0.9);
-    const rhat = computeRhat(chainMeans, chainStdevs, chainCounts);
-    const mcse = computeMCSE(allDraws);
-    const bulkEss = computeBulkESS(chainDraws);
-    const tailEss = computeTailESS(chainDraws);
+    const rhat = chainDraws.length >= 2 ? computeRhat(chainDraws, "rank") : void 0;
+    const mcse = chainDraws.length >= 2 ? computeMCSEMultiChain(chainDraws) : computeMCSE(allDraws);
+    const bulkEssRaw = computeEssBulk(chainDraws);
+    const tailEssRaw = computeEssTail(chainDraws);
+    const bulkEss = isFinite(bulkEssRaw) ? bulkEssRaw : totalESS;
+    const tailEss = isFinite(tailEssRaw) ? tailEssRaw : totalESS;
     const splitRhat = computeSplitRhat(chainDraws);
     const geweke = computeGeweke(allDraws);
     return {
@@ -1048,6 +1282,104 @@ function isMCMCChainsJSON(text) {
   }
 }
 
+// src/parsers/arviz-json.ts
+function parseArviZJSON(input) {
+  const json = typeof input === "string" ? JSON.parse(input) : input;
+  const result = /* @__PURE__ */ new Map();
+  for (const [groupName, group] of Object.entries(json)) {
+    if (!group || typeof group !== "object") continue;
+    const dataVars = group.data_vars;
+    if (!dataVars || typeof dataVars !== "object") continue;
+    const chains = _groupToChains(dataVars);
+    if (chains.size > 0) result.set(groupName, chains);
+  }
+  return result;
+}
+function parseArviZJSONPosterior(input) {
+  const groups = parseArviZJSON(input);
+  const posterior = groups.get("posterior");
+  if (!posterior) {
+    throw new Error(
+      `ArviZ JSON has no "posterior" group. Available: ${[...groups.keys()].join(", ")}`
+    );
+  }
+  return posterior;
+}
+function _groupToChains(dataVars) {
+  const chainMap = /* @__PURE__ */ new Map();
+  for (const [varName, variable] of Object.entries(dataVars)) {
+    if (!variable?.dims || !variable.data) continue;
+    const chainDim = variable.dims.indexOf("chain");
+    const drawDim = variable.dims.indexOf("draw");
+    if (chainDim === -1 || drawDim === -1) continue;
+    for (const { chainIdx, leafName, draws } of _flattenVariable(varName, variable.data, variable.dims, chainDim, drawDim)) {
+      let vars = chainMap.get(chainIdx);
+      if (!vars) {
+        vars = /* @__PURE__ */ new Map();
+        chainMap.set(chainIdx, vars);
+      }
+      vars.set(leafName, draws);
+    }
+  }
+  const chains = /* @__PURE__ */ new Map();
+  for (const [chainIdx, vars] of chainMap) {
+    const name = `chain_${chainIdx}`;
+    const draws = /* @__PURE__ */ new Map();
+    let maxLen = 0;
+    for (const [vn, values] of vars) {
+      const arr = new Float64Array(values);
+      draws.set(vn, arr);
+      maxLen = Math.max(maxLen, arr.length);
+    }
+    chains.set(name, { name, draws, drawCount: maxLen });
+  }
+  return chains;
+}
+function _flattenVariable(varName, data, dims, chainDim, drawDim) {
+  const nChains = data.length;
+  const extraDims = dims.filter((_, i) => i !== chainDim && i !== drawDim);
+  const leaves = [];
+  if (extraDims.length === 0) {
+    for (let ci = 0; ci < nChains; ci++) {
+      const chainData = data[ci];
+      if (!Array.isArray(chainData)) continue;
+      leaves.push({ chainIdx: ci, leafName: varName, draws: chainData.map(Number) });
+    }
+    return leaves;
+  }
+  for (let ci = 0; ci < nChains; ci++) {
+    const chainData = data[ci];
+    if (!Array.isArray(chainData)) continue;
+    const nDraws = chainData.length;
+    const indices = _enumerateIndices(chainData[0]);
+    for (const idx of indices) {
+      const leafName = `${varName}[${idx.join(",")}]`;
+      const draws = new Array(nDraws);
+      for (let di = 0; di < nDraws; di++) {
+        let node = chainData[di], valid = true;
+        for (const i of idx) {
+          if (!Array.isArray(node) || i >= node.length) {
+            valid = false;
+            break;
+          }
+          node = node[i];
+        }
+        draws[di] = valid ? Number(node) : NaN;
+      }
+      leaves.push({ chainIdx: ci, leafName, draws });
+    }
+  }
+  return leaves;
+}
+function _enumerateIndices(node, prefix = []) {
+  if (!Array.isArray(node)) return [prefix];
+  const result = [];
+  for (let i = 0; i < node.length; i++) {
+    result.push(..._enumerateIndices(node[i], [...prefix, i]));
+  }
+  return result;
+}
+
 // src/parsers/detect.ts
 function detectFormat(text) {
   const trimmed = text.trimStart();
@@ -1139,13 +1471,6 @@ function lightLayout(opts) {
 function getLayout(opts) {
   return opts?.theme === "light" ? lightLayout(opts) : darkLayout(opts);
 }
-function getPlotly() {
-  const g = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : void 0;
-  if (g?.Plotly) return g.Plotly;
-  throw new Error(
-    'Plotly.js is required for plotting. Add <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script> or install plotly.js-dist-min'
-  );
-}
 function getConfig() {
   return {
     responsive: true,
@@ -1153,26 +1478,43 @@ function getConfig() {
     toImageButtonOptions: { format: "png", height: 600, width: 1200, scale: 2 }
   };
 }
+function getPlotly() {
+  const g = typeof globalThis !== "undefined" ? globalThis : void 0;
+  if (g?.["Plotly"]) return g["Plotly"];
+  try {
+    return require("plotly.js-dist-min");
+  } catch {
+  }
+  throw new Error(
+    'Plotly.js is not available.\nBrowser: add <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>\nNode.js: npm install plotly.js-dist-min'
+  );
+}
 
 // src/plots/trace.ts
+function tracePlotSpec(data, variable, options) {
+  const traces = data.chainNames.map((chain, i) => ({
+    y: Array.from(data.getDraws(variable, chain)),
+    type: "scatter",
+    mode: "lines",
+    name: chain,
+    line: { width: 0.8, color: CHAIN_COLORS[i % CHAIN_COLORS.length] }
+  }));
+  const base = getLayout(options);
+  const layout = {
+    ...base,
+    title: { text: `Trace: ${variable}` },
+    xaxis: { ...base["xaxis"], title: { text: "Iteration" } },
+    yaxis: { ...base["yaxis"], title: { text: variable } },
+    legend: { orientation: "h", y: -0.15 }
+  };
+  return { data: traces, layout, config: getConfig() };
+}
 function tracePlot(container, data, variable, options) {
   const Plotly = getPlotly();
   let currentVar = variable;
   function render() {
-    const traces = data.chainNames.map((chain, i) => ({
-      y: Array.from(data.getDraws(currentVar, chain)),
-      type: "scatter",
-      mode: "lines",
-      name: chain,
-      line: { width: 0.8, color: CHAIN_COLORS[i % CHAIN_COLORS.length] }
-    }));
-    const layout = {
-      ...getLayout(options),
-      title: { text: `Trace: ${currentVar}` },
-      xaxis: { ...getLayout(options).xaxis, title: "Iteration" },
-      yaxis: { ...getLayout(options).yaxis, title: currentVar }
-    };
-    Plotly.react(container, traces, layout, getConfig());
+    const spec = tracePlotSpec(data, currentVar, options);
+    Plotly.react(container, spec.data, spec.layout, spec.config);
   }
   render();
   return {
@@ -1222,16 +1564,16 @@ function autocorrelationPlot(container, data, variable, options) {
   const MAX_LAG = 50;
   function acf(draws, maxLag) {
     const n = draws.length;
-    let mean2 = 0;
-    for (let i = 0; i < n; i++) mean2 += draws[i];
-    mean2 /= n;
+    let mean = 0;
+    for (let i = 0; i < n; i++) mean += draws[i];
+    mean /= n;
     let variance = 0;
-    for (let i = 0; i < n; i++) variance += (draws[i] - mean2) ** 2;
+    for (let i = 0; i < n; i++) variance += (draws[i] - mean) ** 2;
     if (variance === 0) return new Array(maxLag + 1).fill(0);
     const result = [];
     for (let lag = 0; lag <= maxLag; lag++) {
       let sum = 0;
-      for (let i = 0; i < n - lag; i++) sum += (draws[i] - mean2) * (draws[i + lag] - mean2);
+      for (let i = 0; i < n - lag; i++) sum += (draws[i] - mean) * (draws[i + lag] - mean);
       result.push(sum / variance);
     }
     return result;
@@ -1660,15 +2002,15 @@ function densityPlot(container, data, variable, options) {
     const n = values.length;
     if (n === 0) return { x: [], y: [] };
     let min = values[0], max = values[0];
-    let mean2 = 0;
+    let mean = 0;
     for (let i = 0; i < n; i++) {
       if (values[i] < min) min = values[i];
       if (values[i] > max) max = values[i];
-      mean2 += values[i];
+      mean += values[i];
     }
-    mean2 /= n;
+    mean /= n;
     let variance = 0;
-    for (let i = 0; i < n; i++) variance += (values[i] - mean2) ** 2;
+    for (let i = 0; i < n; i++) variance += (values[i] - mean) ** 2;
     variance /= n;
     const sd = Math.sqrt(variance);
     const sortedCopy2 = new Float64Array(values);
@@ -1876,11 +2218,11 @@ function chainIntervalsPlot(container, data, variable, options) {
   function render() {
     const chainSummaries = data.chainNames.map((chain, index) => {
       const draws = data.getDraws(currentVar, chain);
-      const mean2 = computeMean(draws);
+      const mean = computeMean(draws);
       const hdi90 = computeHDI(draws, 0.9);
       return {
         chain,
-        mean: mean2,
+        mean,
         hdi90,
         color: CHAIN_COLORS[index % CHAIN_COLORS.length]
       };
@@ -2076,6 +2418,9 @@ function integerValue(value) {
 }
 
 // src/index.ts
+function fromArviZJSON(input) {
+  return new MCMCData(parseArviZJSONPosterior(input));
+}
 function fromTuringCSV(text) {
   return new MCMCData(parseTuringCSV(text));
 }
@@ -2084,6 +2429,9 @@ function fromStanCSV(text) {
 }
 function fromStanCSVFiles(files) {
   return new MCMCData(parseStanCSVFiles(files));
+}
+function fromMCMCChainsJSON(text) {
+  return new MCMCData(parseMCMCChainsJSON(text));
 }
 function fromAutoDetect(text) {
   const format = detectFormat(text);
@@ -2095,11 +2443,10 @@ function fromAutoDetect(text) {
     case "mcmcchains-json":
       return fromMCMCChainsJSON(text);
     default:
-      throw new Error(`Unable to detect format. Use fromTuringCSV(), fromStanCSV(), or fromMCMCChainsJSON() directly.`);
+      throw new Error(
+        "Unable to auto-detect format. Use fromTuringCSV(), fromStanCSV(), fromArviZJSON(), or fromMCMCChainsJSON() explicitly."
+      );
   }
-}
-function fromMCMCChainsJSON(text) {
-  return new MCMCData(parseMCMCChainsJSON(text));
 }
 function fromChainArrays(data) {
   const chains = /* @__PURE__ */ new Map();
@@ -2115,29 +2462,4 @@ function fromChainArrays(data) {
   }
   return new MCMCData(chains);
 }
-// Annotate the CommonJS export names for ESM import in node:
-0 && (module.exports = {
-  MCMCData,
-  computeBulkESS,
-  computeESS,
-  computeExcessKurtosis,
-  computeGeweke,
-  computeHDI,
-  computeMCSE,
-  computeMean,
-  computeQuantiles,
-  computeRhat,
-  computeSkewness,
-  computeSplitRhat,
-  computeStdev,
-  computeTailESS,
-  detectFormat,
-  fromAutoDetect,
-  fromChainArrays,
-  fromMCMCChainsJSON,
-  fromStanCSV,
-  fromStanCSVFiles,
-  fromTuringCSV,
-  plots
-});
 //# sourceMappingURL=index.cjs.map

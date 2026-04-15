@@ -66,6 +66,50 @@ interface InferenceData {
 }
 type FileFormat = 'turing-csv' | 'stan-csv' | 'mcmcchains-json' | 'unknown';
 
+interface PlotOptions {
+    height?: number;
+    width?: number;
+    theme?: 'dark' | 'light';
+}
+interface PlotHandle {
+    destroy(): void;
+    update(variable?: string): void;
+}
+/**
+ * Framework-agnostic Plotly specification.
+ *
+ * Returned by all `*Spec` functions — works without a DOM, in Node.js,
+ * on the CLI, in React/Vue wrappers, and in AI tool responses.
+ *
+ * ```ts
+ * // Browser
+ * Plotly.newPlot(el, spec.data, spec.layout, spec.config);
+ *
+ * // React
+ * <Plot data={spec.data} layout={spec.layout} config={spec.config} />
+ *
+ * // CLI / AI agent
+ * console.log(JSON.stringify(spec));
+ * ```
+ */
+interface PlotSpec {
+    readonly data: unknown[];
+    readonly layout: Record<string, unknown>;
+    readonly config: Record<string, unknown>;
+}
+
+/**
+ * R-hat diagnostics — Vehtari et al. (2021) https://doi.org/10.1214/20-BA1221
+ * Mirrors the reference implementation in MCMCDiagnosticTools.jl.
+ */
+type RhatKind = 'rank' | 'bulk' | 'tail' | 'basic';
+/**
+ * Compute R-hat for an array of chains.
+ * 'rank' (default) = max(bulk, tail) — strictest, recommended.
+ * Returns NaN when undefined (< 2 chains, < 4 draws, zero within-chain variance).
+ */
+declare function computeRhat(chains: Float64Array[], kind?: RhatKind): number;
+
 declare class MCMCData implements InferenceData {
     readonly chains: ReadonlyMap<string, ChainData>;
     readonly variableNames: string[];
@@ -88,12 +132,63 @@ declare class MCMCData implements InferenceData {
     filterVariables(variableNames: string[]): InferenceData;
 }
 
+declare function detectFormat(text: string): FileFormat;
+
+/**
+ * ArviZ InferenceData JSON adapter.
+ * Parses output from `az.to_json()` (ArviZ >= 0.11).
+ * Gives compatibility with PyMC, NumPyro, Stan, and Turing.jl (via ArviZ.jl).
+ */
+
+/**
+ * Parse an ArviZ JSON string or pre-parsed object.
+ * Returns a Map keyed by group name ('posterior', 'sample_stats', etc.).
+ */
+declare function parseArviZJSON(input: string | object): Map<string, Map<string, ChainData>>;
+/**
+ * Parse ArviZ JSON and return only the 'posterior' group.
+ * Throws if the posterior group is missing.
+ */
+declare function parseArviZJSONPosterior(input: string | object): Map<string, ChainData>;
+
+/**
+ * ESS estimators.
+ * Single-chain: IMSE estimator (per-chain sequence diagnostics).
+ * Multi-chain:  Geyer's monotone sequence estimator with split chains (Vehtari 2021).
+ */
 declare function computeESS(chain: Float64Array): {
     ess: number;
     autocorrelation: number[];
 };
+declare function computeEssBulk(chains: Float64Array[]): number;
+declare function computeEssTail(chains: Float64Array[], tailProb?: number): number;
+declare function computeEssBasic(chains: Float64Array[]): number;
 
-declare function computeRhat(chainMeans: number[], chainStdevs: number[], chainCounts: number[]): number | undefined;
+/**
+ * Monte Carlo Standard Error (MCSE) estimators.
+ * Mean/Std: ESS-based asymptotic formula.
+ * Quantile: Beta distribution approximation (Flegal & Jones 2011).
+ */
+/** MCSE of the mean for a single chain. */
+declare function computeMCSE(draws: Float64Array): number;
+/** MCSE of the mean across multiple chains using bulk ESS.
+ *  Falls back to pooled single-chain MCSE when chains are too short for bulk ESS. */
+declare function computeMCSEMultiChain(chains: Float64Array[]): number;
+/**
+ * MCSE of a quantile estimator (Flegal & Jones 2011).
+ * @param p      quantile level 0–1
+ * @param essEff effective sample size
+ */
+declare function computeMCSEQuantile(draws: Float64Array, p: number, essEff: number): number;
+/** MCSE of the standard deviation via delta method on the expectand proxy. */
+declare function computeMCSEStd(chains: Float64Array[]): number;
+
+declare function computeGeweke(draws: Float64Array, firstFrac?: number, lastFrac?: number): {
+    z: number;
+    pValue: number;
+};
+
+declare function computeSplitRhat(chains: Float64Array[]): number | undefined;
 
 declare function computeMean(arr: Float64Array): number;
 declare function computeStdev(arr: Float64Array): number;
@@ -108,29 +203,16 @@ declare function computeQuantiles(arr: Float64Array): {
 };
 declare function computeHDI(arr: Float64Array, credMass?: number): [number, number];
 
-declare function computeMCSE(draws: Float64Array): number;
-declare function computeBulkESS(chains: Float64Array[]): number;
-declare function computeTailESS(chains: Float64Array[]): number;
+/**
+ * Trace plot — sequential parameter values per chain over iterations.
+ *
+ * Two entry points:
+ *   tracePlotSpec()  — returns a plain PlotSpec object. No DOM, no Plotly.
+ *                      Works in Node.js, CLI, React/Vue wrappers, AI agents.
+ *   tracePlot()      — renders directly to an HTMLElement (browser only).
+ */
 
-declare function computeGeweke(draws: Float64Array, firstFrac?: number, lastFrac?: number): {
-    z: number;
-    pValue: number;
-};
-
-declare function computeSplitRhat(chains: Float64Array[]): number | undefined;
-
-declare function detectFormat(text: string): FileFormat;
-
-interface PlotOptions {
-    height?: number;
-    width?: number;
-    theme?: 'dark' | 'light';
-}
-interface PlotHandle {
-    destroy(): void;
-    update(variable?: string): void;
-}
-
+/** Render a trace plot into an HTMLElement. Returns a handle for updates/cleanup. */
 declare function tracePlot(container: HTMLElement, data: InferenceData, variable: string, options?: PlotOptions): PlotHandle;
 
 declare function histogramPlot(container: HTMLElement, data: InferenceData, variable: string, options?: PlotOptions): PlotHandle;
@@ -185,11 +267,42 @@ declare namespace index {
   export { type index_PlotHandle as PlotHandle, type index_PlotOptions as PlotOptions, index_autocorrelationPlot as autocorrelationPlot, index_chainIntervalsPlot as chainIntervalsPlot, index_cumulativeMeanPlot as cumulativeMeanPlot, index_densityPlot as densityPlot, index_diagnosticsHeatmapPlot as diagnosticsHeatmapPlot, index_ecdfPlot as ecdfPlot, index_energyPlot as energyPlot, index_forestPlot as forestPlot, index_histogramPlot as histogramPlot, index_pairPlot as pairPlot, index_rankPlot as rankPlot, index_runningRhatPlot as runningRhatPlot, index_summaryTable as summaryTable, index_tracePlot as tracePlot, index_violinPlot as violinPlot };
 }
 
+/**
+ * mcmc-visualizer — public API
+ *
+ * Core: zero runtime dependencies. Plotly.js is an optional peer dep used
+ * only by the DOM-rendering plot functions; all *Spec functions work without it.
+ */
+
+/**
+ * Load from ArviZ JSON (produced by `az.to_json()` in Python).
+ * Compatible with PyMC, NumPyro, Stan (via ArviZ), and Turing.jl (via ArviZ.jl).
+ * Only the `posterior` group is loaded; use `parseArviZJSON` for all groups.
+ */
+declare function fromArviZJSON(input: string | object): InferenceData;
+/** Load from a Turing.jl CSV (long or wide format). */
 declare function fromTuringCSV(text: string): InferenceData;
+/** Load from a single Stan CSV file. */
 declare function fromStanCSV(text: string): InferenceData;
+/** Load from multiple Stan CSV file contents (one string per chain). */
 declare function fromStanCSVFiles(files: string[]): InferenceData;
-declare function fromAutoDetect(text: string): InferenceData;
+/** Load from MCMCChains.jl JSON export. */
 declare function fromMCMCChainsJSON(text: string): InferenceData;
+/** Auto-detect format and load. Throws if format cannot be determined. */
+declare function fromAutoDetect(text: string): InferenceData;
+/**
+ * Load from a plain JavaScript object.
+ * Shape: `{ chain_name: { var_name: number[] } }`
+ *
+ * This is the lowest-friction entry point when you already have samples
+ * in memory (e.g. from a custom sampler or streaming API).
+ *
+ * @example
+ * const data = fromChainArrays({
+ *   chain_1: { mu: [1.2, 1.3, ...], sigma: [0.5, 0.6, ...] },
+ *   chain_2: { mu: [1.1, 1.4, ...], sigma: [0.4, 0.5, ...] },
+ * });
+ */
 declare function fromChainArrays(data: Record<string, Record<string, number[]>>): InferenceData;
 
-export { type ChainData, type FileFormat, type InferenceData, MCMCData, type PlotHandle, type PlotOptions, type SequenceStats, type VariableStats, type VariableSummary, computeBulkESS, computeESS, computeExcessKurtosis, computeGeweke, computeHDI, computeMCSE, computeMean, computeQuantiles, computeRhat, computeSkewness, computeSplitRhat, computeStdev, computeTailESS, detectFormat, fromAutoDetect, fromChainArrays, fromMCMCChainsJSON, fromStanCSV, fromStanCSVFiles, fromTuringCSV, index as plots };
+export { type ChainData, type FileFormat, type InferenceData, MCMCData, type PlotHandle, type PlotOptions, type PlotSpec, type RhatKind, type SequenceStats, type VariableStats, type VariableSummary, computeESS, computeEssBasic, computeEssBulk, computeEssTail, computeExcessKurtosis, computeGeweke, computeHDI, computeMCSE, computeMCSEMultiChain, computeMCSEQuantile, computeMCSEStd, computeMean, computeQuantiles, computeRhat, computeSkewness, computeSplitRhat, computeStdev, detectFormat, fromArviZJSON, fromAutoDetect, fromChainArrays, fromMCMCChainsJSON, fromStanCSV, fromStanCSVFiles, fromTuringCSV, parseArviZJSON, parseArviZJSONPosterior, index as plots };
