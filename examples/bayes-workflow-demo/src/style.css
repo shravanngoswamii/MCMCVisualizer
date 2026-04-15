@@ -412,21 +412,85 @@ code { font-family: var(--mono); font-size: 0.88em; }
 .callout p { color: var(--muted); font-size: 0.87rem; line-height: 1.7; margin-bottom: 8px; }
 .callout p:last-child { margin-bottom: 0; }
 
+/* ── Inventory section ─────────────────────────────────────────────────── */
+.inventory-section {
+  padding: 0 48px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.inventory-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  text-align: center;
+}
+.inv-count {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1.1;
+}
+.inv-label { font-weight: 600; margin: 4px 0; }
+.inv-note  { color: var(--muted); font-size: 0.78rem; }
+
+.naming-explainer {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+}
+.naming-title {
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.naming-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 24px;
+}
+.naming-item {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.naming-key {
+  font-size: 0.8rem;
+  color: var(--accent);
+  flex-shrink: 0;
+  min-width: 240px;
+}
+.naming-desc { color: var(--muted); font-size: 0.83rem; }
+
 /* ── Responsive ────────────────────────────────────────────────────────── */
 @media (max-width: 1100px) {
   .pipeline-section,
   .controls-section,
+  .inventory-section,
   .main-content { padding: 24px 24px; }
   .stats-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .plot-grid.three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .detail-body { grid-template-columns: 1fr; }
   .detail-explanation { border-right: none; border-bottom: 1px solid var(--border); }
+  .inventory-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .naming-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 720px) {
   .app-header { padding: 24px 16px; }
   .pipeline-section,
   .controls-section,
+  .inventory-section,
   .main-content { padding: 20px 16px; }
   .plot-grid.three,
   .plot-grid.two { grid-template-columns: 1fr; }

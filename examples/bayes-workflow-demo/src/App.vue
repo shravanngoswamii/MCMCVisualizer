@@ -6,22 +6,20 @@
         <div class="header-badge">MCMCVisualizer · Workflow Demo</div>
         <h1>Bayesian Workflow — End-to-End Pipeline</h1>
         <p>
-          Traces the path MCMC data takes from a Turing.jl sampler through a
-          CSV logger, a Python uploader, and a backend server — then shows every
-          plot rendered <em>entirely in the browser</em> using MCMCVisualizer
-          instead of a server-side ArviZ + Bokeh pipeline.
+          Accurate simulation of the real app's data structure:
+          <code>{{ MODEL_INFO.nTheta }} model parameters + {{ HMC_INTERNALS.length }} HMC internals</code>
+          stored as <code>param/val</code> variables with OnlineStats running statistics
+          (<code>param/stats[key]/stats/N/field</code>) — exactly the naming and shape the
+          real app produces. All plots rendered <em>in-browser</em> by MCMCVisualizer.
         </p>
       </div>
     </header>
 
-    <!-- ── Pipeline Steps ─────────────────────────────────────────────── -->
+    <!-- ── Pipeline steps ─────────────────────────────────────────────── -->
     <section class="pipeline-section">
       <div class="pipeline-inner">
         <h2 class="section-title">Pipeline Overview</h2>
-        <p class="section-sub">
-          Five boundaries. Each one transforms or transports the MCMC data.
-          Click any step to see the exact format at that boundary.
-        </p>
+        <p class="section-sub">Click any step to see the exact code and data format at that boundary.</p>
 
         <div class="pipeline-track">
           <PipelineStep
@@ -37,9 +35,7 @@
 
         <div class="step-detail" v-if="activeStepData">
           <div class="detail-header">
-            <span class="detail-runtime" :class="activeStepData.runtime">
-              {{ activeStepData.runtime }}
-            </span>
+            <span class="detail-runtime" :class="activeStepData.runtime">{{ activeStepData.runtime }}</span>
             <strong>{{ activeStepData.label }}</strong>
             <span class="detail-role">{{ activeStepData.role }}</span>
           </div>
@@ -59,9 +55,10 @@
         <div class="controls-left">
           <h2 class="section-title">Simulation</h2>
           <p class="section-sub">
-            Model: <code>y = α + β·x + ε,  ε ~ N(0, σ²)</code>
-            &nbsp;·&nbsp; True values: α = 2.5, β = 1.8, σ = 0.6
+            Model: Bayesian logistic regression with 20-dimensional θ
             &nbsp;·&nbsp; {{ MODEL_INFO.nChains }} chains × {{ MODEL_INFO.nDraws }} draws
+            &nbsp;·&nbsp; {{ MODEL_INFO.nTheta + HMC_INTERNALS.length }} variables
+            + {{ (MODEL_INFO.nTheta + HMC_INTERNALS.length) * 5 }} OnlineStats entries
           </p>
         </div>
         <div class="controls-right">
@@ -72,7 +69,12 @@
           <div class="var-selector" v-if="data">
             <label>Variable</label>
             <select v-model="activeVar" @change="onVarChange">
-              <option v-for="p in sim!.paramNames" :key="p" :value="p">{{ p }}</option>
+              <optgroup label="Model parameters">
+                <option v-for="p in sim!.modelParamNames" :key="p" :value="`${p}/val`">{{ p }}</option>
+              </optgroup>
+              <optgroup label="HMC internals">
+                <option v-for="p in sim!.hmcInternalNames" :key="p" :value="`${p}/val`">{{ p }}</option>
+              </optgroup>
             </select>
           </div>
         </div>
@@ -84,10 +86,47 @@
       </div>
     </section>
 
+    <!-- ── Data inventory (before plots) ──────────────────────────────── -->
+    <section class="inventory-section" v-if="sim">
+      <div class="inventory-grid">
+        <div class="inventory-card">
+          <div class="inv-count">{{ MODEL_INFO.nChains }}</div>
+          <div class="inv-label">Chains</div>
+          <div class="inv-note">chain_1 … chain_{{ MODEL_INFO.nChains }}</div>
+        </div>
+        <div class="inventory-card">
+          <div class="inv-count">{{ sim.totalVarCount }}</div>
+          <div class="inv-label">Variables</div>
+          <div class="inv-note">{{ MODEL_INFO.nTheta }} θ params + {{ HMC_INTERNALS.length }} HMC internals</div>
+        </div>
+        <div class="inventory-card">
+          <div class="inv-count">{{ sim.totalStatsCount }}</div>
+          <div class="inv-label">OnlineStats entries</div>
+          <div class="inv-note">5 per variable (n, μ, n, μ, σ²)</div>
+        </div>
+        <div class="inventory-card">
+          <div class="inv-count">{{ MODEL_INFO.nDraws }}</div>
+          <div class="inv-label">Post-warmup draws</div>
+          <div class="inv-note">{{ MODEL_INFO.nWarmup }} warmup discarded</div>
+        </div>
+      </div>
+
+      <!-- Variable naming explainer -->
+      <div class="naming-explainer">
+        <div class="naming-title">Variable naming convention — real app format</div>
+        <div class="naming-grid">
+          <div class="naming-item" v-for="item in namingExamples" :key="item.key">
+            <code class="naming-key">{{ item.key }}</code>
+            <span class="naming-desc">{{ item.desc }}</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ── Results ────────────────────────────────────────────────────── -->
     <main v-if="data" class="main-content">
 
-      <!-- Stats strip -->
+      <!-- Stats strip for active variable -->
       <section class="stats-strip">
         <div class="stats-card" v-for="card in statsCards" :key="card.label">
           <div class="stats-label">{{ card.label }}</div>
@@ -96,9 +135,13 @@
         </div>
       </section>
 
-      <!-- Summary table -->
+      <!-- Summary table — model parameters only -->
       <section class="summary-section">
-        <h3 class="subsection-title">All parameters — diagnostics summary</h3>
+        <h3 class="subsection-title">Model parameters — diagnostics summary</h3>
+        <p class="section-sub" style="margin-bottom: 10px;">
+          Showing θ[1]…θ[{{ MODEL_INFO.nTheta }}] (the <code>/val</code> draws).
+          HMC internals and <code>/stats</code> OnlineStats entries are excluded from diagnostic plots.
+        </p>
         <div class="summary-table-wrap">
           <table class="summary-table">
             <thead>
@@ -117,11 +160,9 @@
                 <td>{{ row.mcse }}</td>
                 <td>{{ row.essBulk }}</td><td>{{ row.essTail }}</td>
                 <td :class="rhatClass(row.rhatRaw)">{{ row.rhat }}</td>
-                <td>
-                  <span class="badge" :class="rhatClass(row.rhatRaw)">
-                    {{ row.rhatRaw < 1.01 ? '✓ converged' : row.rhatRaw < 1.1 ? '⚠ marginal' : '✗ not converged' }}
-                  </span>
-                </td>
+                <td><span class="badge" :class="rhatClass(row.rhatRaw)">
+                  {{ row.rhatRaw < 1.01 ? '✓' : row.rhatRaw < 1.1 ? '⚠' : '✗' }}
+                </span></td>
               </tr>
             </tbody>
           </table>
@@ -133,79 +174,51 @@
         <div class="plots-header">
           <h3 class="subsection-title">
             Per-variable diagnostics
-            <span class="plots-var-badge">{{ activeVar }}</span>
+            <span class="plots-var-badge">{{ activeVarDisplay }}</span>
           </h3>
           <p class="plots-note">
-            All rendered in-browser by MCMCVisualizer using Plotly.js — no server call, no Python, no Bokeh.
+            Plotly.js in-browser — no server call, no Python, no Bokeh.
+            The <code>/val</code> suffix is stripped for display.
           </p>
         </div>
-
         <div class="plot-grid three">
-          <div class="plot-card">
-            <div class="plot-label">Trace plot</div>
-            <div ref="traceEl" class="plot-host"></div>
-          </div>
-          <div class="plot-card">
-            <div class="plot-label">Posterior density (KDE)</div>
-            <div ref="densityEl" class="plot-host"></div>
-          </div>
-          <div class="plot-card">
-            <div class="plot-label">Histogram</div>
-            <div ref="histEl" class="plot-host"></div>
-          </div>
-          <div class="plot-card">
-            <div class="plot-label">Autocorrelation</div>
-            <div ref="acfEl" class="plot-host"></div>
-          </div>
-          <div class="plot-card">
-            <div class="plot-label">Cumulative mean</div>
-            <div ref="cmeanEl" class="plot-host"></div>
-          </div>
-          <div class="plot-card">
-            <div class="plot-label">ECDF</div>
-            <div ref="ecdfEl" class="plot-host"></div>
-          </div>
+          <div class="plot-card"><div class="plot-label">Trace</div><div ref="traceEl" class="plot-host"></div></div>
+          <div class="plot-card"><div class="plot-label">Density (KDE)</div><div ref="densityEl" class="plot-host"></div></div>
+          <div class="plot-card"><div class="plot-label">Histogram</div><div ref="histEl" class="plot-host"></div></div>
+          <div class="plot-card"><div class="plot-label">Autocorrelation</div><div ref="acfEl" class="plot-host"></div></div>
+          <div class="plot-card"><div class="plot-label">Cumulative mean</div><div ref="cmeanEl" class="plot-host"></div></div>
+          <div class="plot-card"><div class="plot-label">ECDF</div><div ref="ecdfEl" class="plot-host"></div></div>
         </div>
-
-        <div class="plot-grid two" style="margin-top: 14px;">
-          <div class="plot-card">
-            <div class="plot-label">Rank plot (convergence)</div>
-            <div ref="rankEl" class="plot-host"></div>
-          </div>
-          <div class="plot-card">
-            <div class="plot-label">Running R-hat</div>
-            <div ref="runRhatEl" class="plot-host"></div>
-          </div>
+        <div class="plot-grid two" style="margin-top:14px;">
+          <div class="plot-card"><div class="plot-label">Rank plot</div><div ref="rankEl" class="plot-host"></div></div>
+          <div class="plot-card"><div class="plot-label">Running R-hat</div><div ref="runRhatEl" class="plot-host"></div></div>
         </div>
       </section>
 
-      <!-- Model-wide plots -->
+      <!-- HMC diagnostic plots -->
       <section class="plots-section">
         <div class="plots-header">
-          <h3 class="subsection-title">Model-wide diagnostics</h3>
-          <p class="plots-note">All parameters together.</p>
+          <h3 class="subsection-title">HMC internals</h3>
+          <p class="plots-note">
+            <code>acceptance_rate/val</code>, <code>hamiltonian_energy/val</code>,
+            <code>n_steps/val</code>, <code>tree_depth/val</code> — NUTS sampler diagnostics.
+          </p>
         </div>
         <div class="plot-grid two">
-          <div class="plot-card tall">
-            <div class="plot-label">Forest plot</div>
-            <div ref="forestEl" class="plot-host"></div>
-          </div>
-          <div class="plot-card tall">
-            <div class="plot-label">Violin plot</div>
-            <div ref="violinEl" class="plot-host"></div>
-          </div>
-          <div class="plot-card tall wide">
-            <div class="plot-label">Diagnostics heatmap — ESS bulk, ESS tail, R-hat</div>
-            <div ref="heatmapEl" class="plot-host"></div>
-          </div>
-          <div class="plot-card tall">
-            <div class="plot-label">Pair plot</div>
-            <div ref="pairsEl" class="plot-host"></div>
-          </div>
-          <div class="plot-card tall">
-            <div class="plot-label">Chain intervals</div>
-            <div ref="intervalsEl" class="plot-host"></div>
-          </div>
+          <div class="plot-card"><div class="plot-label">Energy plot</div><div ref="energyEl" class="plot-host"></div></div>
+          <div class="plot-card"><div class="plot-label">HMC internals — trace</div><div ref="hmcTraceEl" class="plot-host"></div></div>
+        </div>
+      </section>
+
+      <!-- Model-wide plots (θ params only) -->
+      <section class="plots-section">
+        <div class="plots-header">
+          <h3 class="subsection-title">Model-wide diagnostics — θ[1]…θ[{{ MODEL_INFO.nTheta }}]</h3>
+        </div>
+        <div class="plot-grid two">
+          <div class="plot-card tall"><div class="plot-label">Forest plot</div><div ref="forestEl" class="plot-host"></div></div>
+          <div class="plot-card tall"><div class="plot-label">Violin plot</div><div ref="violinEl" class="plot-host"></div></div>
+          <div class="plot-card tall wide"><div class="plot-label">Diagnostics heatmap — ESS bulk, ESS tail, R-hat</div><div ref="heatmapEl" class="plot-host"></div></div>
         </div>
       </section>
 
@@ -214,19 +227,21 @@
         <div class="callout">
           <div class="callout-icon">↑</div>
           <div>
-            <strong>What MCMCVisualizer replaces in the server pipeline</strong>
+            <strong>What MCMCVisualizer replaces — accurately mirroring the real app structure</strong>
             <p>
-              The typical pattern for web-based MCMC dashboards is to send raw sample data
-              to a server, store it as ArviZ netCDF, then run <code>az.plot_autocorr()</code> /
-              <code>az.plot_ecdf()</code> / <code>az.plot_dist()</code> with a Bokeh backend and
-              return Bokeh JSON to the browser. The browser loads several Bokeh script files
-              and calls <code>Bokeh.embed.embed_item()</code> for each plot.
+              The real app receives data in exactly the format simulated here:
+              <code>θ[1]/val</code>–<code>θ[47]/val</code> plus 11 HMC internals (<code>acceptance_rate/val</code>,
+              <code>hamiltonian_energy/val</code>, etc.) and 290 OnlineStats running statistics
+              (<code>stats[key]/stats/N/field</code>).
+              The current server pipeline converts this to ArviZ netCDF, stores it on S3, then
+              runs <code>az.plot_*()</code> with a Bokeh backend on demand.
             </p>
             <p>
-              With MCMCVisualizer, every plot above is generated entirely in-browser from
-              the raw chain data. No server round-trip. No ArviZ. No Bokeh. ESS bulk and
-              rank R-hat match MCMCDiagnosticTools.jl to within 1–2 units (verified against
-              MCMCChains.jl output with 4 chains × 2000 draws).
+              MCMCVisualizer calls <code>fromChainArrays()</code> on the same raw data, filters
+              <code>/val</code> variables for diagnostic plots, and renders everything with Plotly.js.
+              The <code>/stats</code> entries (OnlineStats) are stored in the InferenceData object
+              and available for inspection but excluded from MCMC diagnostic plots since they are
+              derived statistics, not posterior draws.
             </p>
           </div>
         </div>
@@ -240,10 +255,10 @@ import { ref, computed, onBeforeUnmount, nextTick } from 'vue';
 import { fromChainArrays, plots } from 'mcmc-visualizer';
 import type { InferenceData, PlotHandle } from 'mcmc-visualizer';
 import PipelineStep from './components/PipelineStep.vue';
-import { runSimulation, MODEL_INFO } from './simulation';
+import { runSimulation, MODEL_INFO, HMC_INTERNALS } from './simulation';
 import type { SimulationResult } from './simulation';
 
-// ── Pipeline step definitions ──────────────────────────────────────────
+// ── Pipeline steps ────────────────────────────────────────────────────
 type StepId = 'sampler' | 'logger' | 'uploader' | 'server' | 'browser';
 
 const steps: Array<{
@@ -251,254 +266,216 @@ const steps: Array<{
   role: string; explanation: string[]; code: string;
 }> = [
   {
-    id:      'sampler',
-    label:   'Turing.jl',
-    runtime: 'julia',
-    icon:    '𝒯',
-    role:    'Probabilistic model + NUTS sampler',
+    id: 'sampler', label: 'Turing.jl', runtime: 'julia', icon: '𝒯',
+    role: 'Probabilistic model + NUTS sampler',
     explanation: [
-      'A Turing.jl @model defines the probabilistic structure. sample() runs NUTS via AbstractMCMC.jl with 4 parallel chains.',
-      'Each chain independently explores the posterior with the No-U-Turn Sampler. 1000 warmup draws are discarded, 2000 post-warmup draws are kept per chain.',
-      'The sampler fires an AbstractMCMC callback on every kept draw. A CSV logger callback is registered to capture the samples.',
+      'A @model with a 47-dimensional parameter vector θ (this demo: 20) and a logistic likelihood. AbstractMCMC runs NUTS with 4 parallel chains.',
+      'NUTS produces model parameter draws alongside HMC internal statistics: acceptance_rate, hamiltonian_energy, n_steps, tree_depth, step_size, numerical_error, etc.',
+      'OnlineStats.jl is used inside the callback to maintain running mean+variance (Welford algorithm) for each variable. This gives real-time statistics without storing all draws.',
     ],
-    code: `using Turing
+    code: `using Turing, OnlineStats
 
-@model function linear_model(x, y)
-    α ~ Normal(0, 5)
-    β ~ Normal(0, 5)
-    σ ~ truncated(Normal(0, 2); lower = 0)
+@model function logistic_model(X, y)
+    θ ~ filldist(Normal(0, 1), size(X, 2))  # 47-dim
     for i in eachindex(y)
-        y[i] ~ Normal(α + β * x[i], σ)
+        p = logistic(dot(X[i,:], θ))
+        y[i] ~ Bernoulli(p)
     end
 end
 
-# csv_callback is registered as an AbstractMCMC callback
+# The callback receives per-iteration draws AND
+# HMC internals (acceptance_rate, hamiltonian_energy,
+# n_steps, step_size, tree_depth, etc.)
 chains = sample(
-    linear_model(x, y),
-    NUTS(1000, 0.8),
-    MCMCThreads(),
-    2000, 4;               # 2000 draws, 4 chains
-    discard_initial = 1000, # discard warmup
-    callback = csv_callback,
-    progress = false,
+    logistic_model(X, y),
+    NUTS(1000, 0.8), MCMCThreads(),
+    2000, 4;
+    callback = csv_and_onlinestats_callback,
 )`,
   },
   {
-    id:      'logger',
-    label:   'CSV Logger',
-    runtime: 'julia',
-    icon:    '📝',
-    role:    'AbstractMCMC callback — writes draws to CSV per iteration',
+    id: 'logger', label: 'CSV Logger', runtime: 'julia', icon: '📝',
+    role: 'AbstractMCMC callback — writes /val draws + /stats running statistics',
     explanation: [
-      'The callback implements the AbstractMCMC callback protocol and fires on every kept draw.',
-      'Each invocation appends one row per parameter to a local CSV file in long format: chain_name, param_name, iteration, value.',
-      'This CSV file is the handoff point from Julia to the Python uploader. MCMCChains.jl is not needed for this path.',
+      'On every kept draw, the callback writes two kinds of data to CSV:',
+      '1) Raw draws stored as param_name/val — one row per (chain, param, iteration).',
+      '2) OnlineStats running statistics stored as param_name/stats[key]/stats/N/field — updated Welford mean+variance.',
+      'The /val suffix and /stats path are the real naming convention used throughout the app.',
     ],
-    code: `# AbstractMCMC callback — simplified
-function (cb::CSVLoggerCallback)(
-    rng, model, sampler, transition, state, iter; kwargs...
-)
-    # Extract parameter values from the transition
-    params = get_params(model, sampler, transition, state)
+    code: `# Variables written per iteration:
 
-    for (param_name, value) in pairs(params)
-        # Append one row per parameter per iteration
-        write_csv_row(
-            cb.csv_file,
-            cb.chain_name,  # "chain_1", "chain_2", …
-            String(param_name),  # "α", "β", "σ"
-            iter,                # 1, 2, 3, …, 2000
-            Float64(value),      # 2.591873, 1.970910, …
-        )
-    end
-end
+# ── Raw draws (/val suffix) ──────────────────────────
+# chain_1, θ[1]/val,                1, 0.832941
+# chain_1, θ[2]/val,                1, -1.23451
+# ...
+# chain_1, acceptance_rate/val,     1, 0.943210
+# chain_1, hamiltonian_energy/val,  1, 28.41234
+# chain_1, n_steps/val,             1, 15
+# chain_1, tree_depth/val,          1, 4
 
-# CSV output (first few rows):
-# chain_1,α,1,2.591873
-# chain_1,α,2,2.533344
-# chain_1,β,1,1.970910
-# chain_1,β,2,1.720958
-# chain_1,σ,1,0.516769`,
+# ── OnlineStats running statistics (/stats path) ─────
+# chain_1, θ[1]/stats[key]/stats/1/n,   1, 1
+# chain_1, θ[1]/stats[key]/stats/1/μ,   1, 0.832941
+# chain_1, θ[1]/stats[key]/stats/2/n,   1, 1
+# chain_1, θ[1]/stats[key]/stats/2/μ,   1, 0.832941
+# chain_1, θ[1]/stats[key]/stats/2/σ2,  1, 0
+
+# Total rows per iteration: 47 vars + 11 HMC = 58 /val rows
+#                           + 58 × 5 = 290 /stats rows`,
   },
   {
-    id:      'uploader',
-    label:   'Python Uploader',
-    runtime: 'python',
-    icon:    '🐍',
-    role:    'Watches CSV files → batches draws → HTTP POST to backend',
+    id: 'uploader', label: 'Python Uploader', runtime: 'python', icon: '🐍',
+    role: 'CSV reader → JSON batcher → HTTP POST to backend',
     explanation: [
-      'A Python process watches the CSV files written by the Julia callback and reads them incrementally as new rows appear.',
-      'It batches draws into a structured JSON payload and POSTs to the backend API.',
-      'The server receives raw chain data — not plots. All visualization decisions happen downstream.',
+      'Reads both /val and /stats rows from the CSV files and packages them as a structured JSON payload.',
+      'The stats are sent alongside raw draws so the server can update running statistics efficiently without re-reading all historical data.',
+      'Both variable types appear in the "vars" dict with their full path-based names as keys.',
     ],
-    code: `# Python uploader — simplified
+    code: `payload = {
+    "vars": {
+        "chain_1": {
+            # Raw draws (58 variables)
+            "θ[1]/val":               [0.833, 0.712, ...],
+            "θ[2]/val":               [-1.234, -1.191, ...],
+            "acceptance_rate/val":    [0.943, 0.871, ...],
+            "hamiltonian_energy/val": [28.41, 27.93, ...],
+            # ...
 
-def sync_mcmc_data(csv_dir, api_client, experiment_id):
-    """Reads CSV files and uploads draws to the backend server."""
-    chain_data = {}
-    iteration_range = {}
-
-    for csv_file in csv_dir.glob("chain_*.csv"):
-        chain_name = csv_file.stem  # "chain_1", etc.
-        rows = read_new_rows(csv_file)
-
-        chain_data[chain_name] = {}
-        for chain, param, iteration, value in rows:
-            chain_data[chain_name].setdefault(param, []).append(value)
-        iteration_range[chain_name] = (min_iter, max_iter)
-
-    payload = {
-        "vars": {
-            "chain_1": {
-                "α": [2.5919, 2.5333, 1.8361, …],
-                "β": [1.9709, 1.7210, 1.7523, …],
-                "σ": [0.5168, 0.6102, 0.5892, …],
-            },
-            "chain_2": { … },
+            # OnlineStats statistics (290 entries)
+            "θ[1]/stats[key]/stats/1/n":   [1, 2, 3, ...],
+            "θ[1]/stats[key]/stats/1/μ":   [0.833, 0.772, ...],
+            "θ[1]/stats[key]/stats/2/σ2":  [0, 0.007, ...],
+            # ...
         },
-        "iteration": {
-            "chain_1": [1, 2000],
-            "chain_2": [1, 2000],
-        }
-    }
-    api_client.post(f"/api/samples/{experiment_id}", json=payload)`,
+        "chain_2": { ... },
+        "chain_3": { ... },
+        "chain_4": { ... },
+    },
+    "iteration": { "chain_1": [1, 2000], ... }
+}`,
   },
   {
-    id:      'server',
-    label:   'Backend Server',
-    runtime: 'server',
-    icon:    '☁',
-    role:    'Two paths: WebSocket broadcast + ArviZ netCDF storage + Bokeh plots',
+    id: 'server', label: 'Backend Server', runtime: 'server', icon: '☁',
+    role: 'WebSocket broadcast + ArviZ netCDF + Bokeh plot generation',
     explanation: [
-      'Path A (real-time): The server broadcasts raw sample data via WebSocket. The browser receives draws immediately and can compute diagnostics in-browser.',
-      'Path B (stored plots): The server converts incoming data to ArviZ InferenceData, saves as netCDF files, and when the browser requests a plot runs az.plot_*() with Bokeh backend to return Bokeh JSON.',
-      '⚠ Path B (the ArviZ/Bokeh path) is what MCMCVisualizer replaces entirely — no server round-trip needed.',
+      'Path A: Broadcasts raw /val draws via WebSocket. The browser receives samples in real-time and runs in-browser diagnostics.',
+      'Path B: Converts /val data to ArviZ InferenceData (stripping /val suffix, ignoring /stats), saves as netCDF per chain on S3.',
+      'On-demand plot generation: loads .nc files, runs az.plot_autocorr/ecdf/dist() with Bokeh backend, returns Bokeh JSON. ⚠ This is the path MCMCVisualizer replaces.',
     ],
-    code: `# Backend server
-
-# --- Path A: real-time WebSocket broadcast ---
-websocket.broadcast({
-    "type":  "mcmc_sample",
-    "vars":  chain_data,
-    "iteration": iteration_range,
-})
-# → Browser receives raw draws immediately
-
-# --- Path B: ArviZ netCDF storage ---
+    code: `# sample_saver.py — strips /val suffix, saves /val only
 import arviz as az
 
+# Only the /val variables become posterior samples
+clean = {k.replace("/val", ""): v
+         for k, v in chain_data.items()
+         if k.endswith("/val")}
+
 dataset = az.convert_to_inference_data(
-    chain_data, coords={"chain": [chain_name]}
+    clean, coords={"chain": [chain_name]}
 )
 dataset.to_netcdf(tmp_file)
-storage.upload(tmp_file, f"{experiment_id}/{chain_name}.nc")
+storage.upload(tmp_file, f"{exp_id}/{chain_name}.nc")
 
-# --- Path B: Bokeh plot generation (on-demand) ---
-idata  = az.from_netcdf(storage.download(nc_key))
-ax     = az.plot_autocorr(idata, backend="bokeh", show=False)
-ax     = az.plot_ecdf(values,   backend="bokeh", show=False)
-ax     = az.plot_dist(values,   backend="bokeh", show=False)
+# arviz_plot.py — on-demand Bokeh rendering
+idata  = az.from_netcdf(storage.download(key))
+ax     = az.plot_autocorr(idata,   backend="bokeh")
+ax     = az.plot_ecdf(values,       backend="bokeh")
+ax     = az.plot_dist(values,       backend="bokeh")
 result = bokeh.embed.json_item(ax)
-# → Return Bokeh JSON → browser loads 5 Bokeh scripts
-#   and calls Bokeh.embed.embed_item(result, div)
-
-# ⚠  MCMCVisualizer removes the need for Path B entirely`,
+# ⚠  MCMCVisualizer replaces this entirely`,
   },
   {
-    id:      'browser',
-    label:   'Browser',
-    runtime: 'browser',
-    icon:    '🌐',
-    role:    'MCMCVisualizer — all plots, diagnostics, and statistics in-browser',
+    id: 'browser', label: 'Browser', runtime: 'browser', icon: '🌐',
+    role: 'MCMCVisualizer — filters /val variables, computes diagnostics in-browser',
     explanation: [
-      'Raw chain data arrives via WebSocket (already in memory). fromChainArrays() builds an InferenceData object.',
-      'ESS bulk, ESS tail, and rank R-hat are computed in-browser using the Geyer + FFT estimator — verified to match MCMCDiagnosticTools.jl accuracy.',
-      'Every plot is a Plotly.js figure generated by MCMCVisualizer. No Bokeh scripts, no server request per plot, no Python dependency.',
+      'fromChainArrays() accepts all variables including /stats entries. The app filters to /val variables for diagnostic plots.',
+      'ESS bulk + rank R-hat are computed using the Geyer + FFT estimator, matching MCMCDiagnosticTools.jl accuracy.',
+      'No server call for plots. The energy plot uses hamiltonian_energy/val directly from the chain data.',
     ],
-    code: `// In the browser — replaces the server-side Bokeh plot pipeline
-import { fromChainArrays, plots } from 'mcmc-visualizer';
+    code: `import { fromChainArrays, plots } from 'mcmc-visualizer';
 
-// Build InferenceData from WebSocket stream data
+// Load all variables — /val draws + /stats running stats
 const data = fromChainArrays({
-  chain_1: { α: [...2000 draws], β: [...], σ: [...] },
-  chain_2: { … },
-  chain_3: { … },
-  chain_4: { … },
+  chain_1: {
+    "θ[1]/val":                     [...2000 draws],
+    // ... all 47 θ + 11 HMC = 58 /val variables
+    "θ[1]/stats[key]/stats/1/n":    [...running n],
+    // ... 290 /stats entries
+  },
+  chain_2: { ... },
+  chain_3: { ... },
+  chain_4: { ... },
 });
 
-// Per-variable plots (all Plotly.js, in-browser)
-plots.tracePlot(el,           data, 'α', opts);
-plots.densityPlot(el,         data, 'α', opts);
-plots.autocorrelationPlot(el, data, 'α', opts);
-plots.ecdfPlot(el,            data, 'α', opts);
-plots.rankPlot(el,            data, 'α', opts);
-plots.runningRhatPlot(el,     data, 'α', opts);
+// Filter: only /val variables go to diagnostic plots
+const modelVars = data.variableNames
+  .filter(v => v.endsWith("/val") && !isHMCInternal(v));
 
-// Model-wide plots
-plots.forestPlot(el,             data, opts);
-plots.diagnosticsHeatmapPlot(el, data, opts);
-plots.violinPlot(el,             data, opts);
+plots.tracePlot(el,   data, "θ[1]/val", opts);
+plots.forestPlot(el,  data.filterVariables(modelVars), opts);
+plots.energyPlot(el,  data, opts);  // uses hamiltonian_energy/val
 
-// ESS and R-hat match MCMCChains.jl output
-const stats = data.variableStats('α');
-// stats.bulkEss ≈ 6960  (MCMCChains: 6960.8 ✓)
-// stats.rhat    ≈ 1.000 (MCMCChains: 1.0001 ✓)`,
+// ESS matches MCMCChains.jl — verified in dev/compare.mjs`,
   },
 ];
 
 // ── State ─────────────────────────────────────────────────────────────
-const activeStep = ref<StepId>('sampler');
+const activeStep     = ref<StepId>('sampler');
 const activeStepData = computed(() => steps.find(s => s.id === activeStep.value));
 
-const running   = ref(false);
-const statusMsg = ref('');
-const data      = ref<InferenceData | null>(null);
-const sim       = ref<SimulationResult | null>(null);
-const activeVar = ref('α');
+const running    = ref(false);
+const statusMsg  = ref('');
+const data       = ref<InferenceData | null>(null);
+const sim        = ref<SimulationResult | null>(null);
+const activeVar  = ref('θ[1]/val');
 
-const traceEl     = ref<HTMLElement>();
-const densityEl   = ref<HTMLElement>();
-const histEl      = ref<HTMLElement>();
-const acfEl       = ref<HTMLElement>();
-const cmeanEl     = ref<HTMLElement>();
-const ecdfEl      = ref<HTMLElement>();
-const rankEl      = ref<HTMLElement>();
-const runRhatEl   = ref<HTMLElement>();
-const forestEl    = ref<HTMLElement>();
-const violinEl    = ref<HTMLElement>();
-const heatmapEl   = ref<HTMLElement>();
-const pairsEl     = ref<HTMLElement>();
-const intervalsEl = ref<HTMLElement>();
+// Active variable display name (strip /val suffix)
+const activeVarDisplay = computed(() => activeVar.value.replace('/val', ''));
+
+// Plot DOM refs
+const traceEl    = ref<HTMLElement>(); const densityEl = ref<HTMLElement>();
+const histEl     = ref<HTMLElement>(); const acfEl     = ref<HTMLElement>();
+const cmeanEl    = ref<HTMLElement>(); const ecdfEl    = ref<HTMLElement>();
+const rankEl     = ref<HTMLElement>(); const runRhatEl = ref<HTMLElement>();
+const energyEl   = ref<HTMLElement>(); const hmcTraceEl= ref<HTMLElement>();
+const forestEl   = ref<HTMLElement>(); const violinEl  = ref<HTMLElement>();
+const heatmapEl  = ref<HTMLElement>();
 
 const plotHandles = ref<PlotHandle[]>([]);
 
-// ── Summary table ──────────────────────────────────────────────────────
+// ── Naming convention explainer ────────────────────────────────────────
+const namingExamples = [
+  { key: 'θ[1]/val',                          desc: 'Raw posterior draw for θ[1] (one per iteration)' },
+  { key: 'acceptance_rate/val',               desc: 'HMC internal: NUTS acceptance rate' },
+  { key: 'hamiltonian_energy/val',            desc: 'HMC internal: total Hamiltonian energy' },
+  { key: 'θ[1]/stats[key]/stats/1/n',         desc: 'OnlineStats: draw count' },
+  { key: 'θ[1]/stats[key]/stats/1/μ',         desc: 'OnlineStats: running mean (Welford)' },
+  { key: 'θ[1]/stats[key]/stats/2/σ2',        desc: 'OnlineStats: running variance (Welford)' },
+];
+
+// ── Summary table — model parameters only ─────────────────────────────
 const summaryRows = computed(() => {
-  if (!data.value) return [];
-  return data.value.variableNames.map(param => {
-    const s = data.value!.variableStats(param);
+  if (!data.value || !sim.value) return [];
+  return sim.value.modelParamNames.slice(0, 10).map(param => {
+    const varName = `${param}/val`;
+    const s = data.value!.variableStats(varName);
     const f = (n: number, d = 4) => isNaN(n) ? '—' : n.toFixed(d);
     const rhatVal = s.rhat ?? s.splitRhat ?? NaN;
     return {
       param,
-      mean:    f(s.mean),
-      sd:      f(s.stdev),
-      q025:    f(s.quantiles.q5),
-      q975:    f(s.quantiles.q95),
-      mcse:    f(s.mcse),
+      mean:    f(s.mean, 3),  sd:      f(s.stdev, 3),
+      q025:    f(s.quantiles.q5, 3),  q975: f(s.quantiles.q95, 3),
+      mcse:    f(s.mcse, 5),
       essBulk: isNaN(s.bulkEss) ? '—' : Math.round(s.bulkEss).toString(),
       essTail: isNaN(s.tailEss) ? '—' : Math.round(s.tailEss).toString(),
-      rhat:    f(rhatVal),
-      rhatRaw: rhatVal,
+      rhat:    f(rhatVal),  rhatRaw: rhatVal,
     };
   });
 });
 
 function rhatClass(rhat: number) {
   if (isNaN(rhat)) return '';
-  if (rhat < 1.01)  return 'good';
-  if (rhat < 1.1)   return 'warn';
-  return 'bad';
+  return rhat < 1.01 ? 'good' : rhat < 1.1 ? 'warn' : 'bad';
 }
 
 // ── Stats strip ────────────────────────────────────────────────────────
@@ -508,49 +485,59 @@ const statsCards = computed(() => {
   const f = (n: number, d = 4) => isNaN(n) ? '—' : n.toFixed(d);
   const rhat = s.rhat ?? s.splitRhat ?? NaN;
   return [
-    { label: 'Posterior mean', value: f(s.mean, 4), note: `sd  ${f(s.stdev, 4)}` },
-    { label: '90% HDI', value: `[${f(s.hdi90[0], 3)}, ${f(s.hdi90[1], 3)}]`, note: `width ${f(s.hdi90Width, 3)}` },
-    { label: 'ESS bulk', value: isNaN(s.bulkEss) ? '—' : Math.round(s.bulkEss).toString(), note: `tail ${isNaN(s.tailEss) ? '—' : Math.round(s.tailEss)}` },
-    { label: 'MCSE (mean)', value: f(s.mcse, 5), note: `ess/draw ${f(s.essPerDraw, 3)}` },
-    { label: 'R-hat (rank)', value: f(rhat, 4), note: rhat < 1.01 ? '✓ converged' : rhat < 1.1 ? '⚠ marginal' : '✗ not converged' },
-    { label: 'Geweke z', value: f(s.geweke.z, 3), note: `p = ${f(s.geweke.pValue, 3)}` },
+    { label: 'Mean',      value: f(s.mean, 4),   note: `sd ${f(s.stdev, 4)}` },
+    { label: '90% HDI',   value: `[${f(s.hdi90[0],3)}, ${f(s.hdi90[1],3)}]`, note: `width ${f(s.hdi90Width,3)}` },
+    { label: 'ESS bulk',  value: isNaN(s.bulkEss) ? '—' : Math.round(s.bulkEss).toString(), note: `tail ${isNaN(s.tailEss) ? '—' : Math.round(s.tailEss)}` },
+    { label: 'MCSE',      value: f(s.mcse, 5),   note: `ess/draw ${f(s.essPerDraw, 3)}` },
+    { label: 'R-hat',     value: f(rhat, 4),     note: rhat < 1.01 ? '✓ converged' : '⚠ check' },
+    { label: 'Geweke z',  value: f(s.geweke.z,3), note: `p = ${f(s.geweke.pValue,3)}` },
   ];
 });
 
 // ── Simulation ─────────────────────────────────────────────────────────
 async function runSim() {
   running.value   = true;
-  statusMsg.value = 'Step 1/5 — Turing.jl: running NUTS sampler…';
+  statusMsg.value = 'Step 1 — Turing.jl: NUTS sampling θ[1]…θ[20] + HMC internals…';
+  await nextTick(); await delay(60);
+  statusMsg.value = 'Step 2 — CSV Logger: writing /val draws + /stats OnlineStats per iteration…';
+  await delay(60);
+  statusMsg.value = 'Step 3 — Python Uploader: batching payload (58 vars + 290 stats)…';
+  await delay(60);
+  statusMsg.value = 'Step 4 — Backend Server: ArviZ netCDF storage (simulated, skipped)…';
+  await delay(60);
+  statusMsg.value = 'Step 5 — Browser: building InferenceData, computing diagnostics…';
+
+  const result = runSimulation();
+  sim.value    = result;
+
+  // Convert Float64Array records to regular number arrays for fromChainArrays
+  const converted: Record<string, Record<string, number[]>> = {};
+  for (const [chain, vars] of Object.entries(result.chainArrays)) {
+    converted[chain] = {};
+    for (const [k, arr] of Object.entries(vars)) {
+      converted[chain][k] = Array.from(arr as unknown as ArrayLike<number>);
+    }
+  }
+  data.value = fromChainArrays(converted);
+
+  // Default to first model parameter
+  activeVar.value = `θ[1]/val`;
   await nextTick();
-  await delay(60);
-
-  statusMsg.value = 'Step 2/5 — CSV Logger: writing draws per iteration…';
-  await delay(60);
-
-  statusMsg.value = 'Step 3/5 — Python Uploader: batching and posting to server…';
-  await delay(60);
-
-  statusMsg.value = 'Step 4/5 — Backend Server: storing as netCDF (simulated, skipped)…';
-  await delay(60);
-
-  statusMsg.value = 'Step 5/5 — Browser: building InferenceData and computing diagnostics…';
-  const result  = runSimulation();
-  sim.value     = result;
-  data.value    = fromChainArrays(result.chainArrays);
-  activeVar.value = result.paramNames[0]!;
-
-  await nextTick();
-  statusMsg.value = 'Rendering all plots with MCMCVisualizer…';
+  statusMsg.value = 'Rendering plots…';
 
   plotHandles.value.forEach(h => h.destroy());
   plotHandles.value = [];
 
-  const opts     = { theme: 'dark' as const, height: 320 };
-  const wideOpts = { theme: 'dark' as const, height: 420 };
-  const d = data.value;
-  const v = activeVar.value;
-  const hs: PlotHandle[] = [];
+  const opts    = { theme: 'dark' as const, height: 320 };
+  const wOpts   = { theme: 'dark' as const, height: 420 };
+  const d       = data.value;
+  const v       = activeVar.value;
 
+  // /val model parameter variables only — for forest/violin/heatmap
+  const modelValVars = result.modelParamNames.map(p => `${p}/val`);
+  const modelData    = d.filterVariables(modelValVars);
+
+  const hs: PlotHandle[] = [];
   if (traceEl.value)    hs.push(plots.tracePlot(traceEl.value, d, v, opts));
   if (densityEl.value)  hs.push(plots.densityPlot(densityEl.value, d, v, opts));
   if (histEl.value)     hs.push(plots.histogramPlot(histEl.value, d, v, opts));
@@ -559,15 +546,16 @@ async function runSim() {
   if (ecdfEl.value)     hs.push(plots.ecdfPlot(ecdfEl.value, d, v, opts));
   if (rankEl.value)     hs.push(plots.rankPlot(rankEl.value, d, v, opts));
   if (runRhatEl.value)  hs.push(plots.runningRhatPlot(runRhatEl.value, d, v, opts));
-  if (forestEl.value)   hs.push(plots.forestPlot(forestEl.value, d, wideOpts));
-  if (violinEl.value)   hs.push(plots.violinPlot(violinEl.value, d, wideOpts));
-  if (heatmapEl.value)  hs.push(plots.diagnosticsHeatmapPlot(heatmapEl.value, d, wideOpts));
-  if (pairsEl.value)    hs.push(plots.pairPlot(pairsEl.value, d, result.paramNames, wideOpts));
-  if (intervalsEl.value)hs.push(plots.chainIntervalsPlot(intervalsEl.value, d, v, wideOpts));
+  if (energyEl.value)   hs.push(plots.energyPlot(energyEl.value, d, opts));
+  if (hmcTraceEl.value) hs.push(plots.tracePlot(hmcTraceEl.value, d, 'acceptance_rate/val', opts));
+  if (forestEl.value)   hs.push(plots.forestPlot(forestEl.value, modelData, wOpts));
+  if (violinEl.value)   hs.push(plots.violinPlot(violinEl.value, modelData, wOpts));
+  if (heatmapEl.value)  hs.push(plots.diagnosticsHeatmapPlot(heatmapEl.value, modelData, wOpts));
 
   plotHandles.value = hs;
-  running.value   = false;
-  statusMsg.value = `Done — ${MODEL_INFO.nChains} chains × ${MODEL_INFO.nDraws} post-warmup draws, all plots rendered in browser.`;
+  running.value    = false;
+  const nTotal = MODEL_INFO.nTheta + HMC_INTERNALS.length;
+  statusMsg.value = `Done — ${nTotal} variables (${nTotal * 5} OnlineStats) × ${MODEL_INFO.nChains} chains × ${MODEL_INFO.nDraws} draws.`;
   activeStep.value = 'browser';
 }
 
