@@ -1,6 +1,6 @@
 import type { InferenceData } from '../types';
 import type { PlotOptions, PlotHandle } from './types';
-import { getPlotly, getLayout, getConfig, CHAIN_COLORS } from './types';
+import { getPlotly, getLayout, getConfig, CHAIN_COLORS, resolveChainColors } from './types';
 
 export function ecdfPlot(
   container: HTMLElement,
@@ -21,6 +21,7 @@ export function ecdfPlot(
   }
 
   function render() {
+    const colors = resolveChainColors(options);
     const traces = data.chainNames.map((chain, i) => {
       const { x, y } = computeECDF(data.getDraws(currentVar, chain));
       return {
@@ -29,7 +30,7 @@ export function ecdfPlot(
         type: 'scatter' as const,
         mode: 'lines' as const,
         name: chain,
-        line: { width: 2, shape: 'hv' as const, color: CHAIN_COLORS[i % CHAIN_COLORS.length] },
+        line: { width: 2, shape: 'hv' as const, color: colors[i % colors.length] },
       };
     });
 

@@ -1,6 +1,6 @@
 import type { InferenceData } from '../types';
 import type { PlotOptions, PlotHandle } from './types';
-import { getPlotly, getLayout, getConfig, CHAIN_COLORS } from './types';
+import { getPlotly, getLayout, getConfig, CHAIN_COLORS, resolveChainColors } from './types';
 
 export function cumulativeMeanPlot(
   container: HTMLElement,
@@ -12,6 +12,7 @@ export function cumulativeMeanPlot(
   let currentVar = variable;
 
   function render() {
+    const colors = resolveChainColors(options);
     const traces = data.chainNames.map((chain, i) => {
       const draws = data.getDraws(currentVar, chain);
       const cumMean: number[] = [];
@@ -25,7 +26,7 @@ export function cumulativeMeanPlot(
         type: 'scatter' as const,
         mode: 'lines' as const,
         name: chain,
-        line: { width: 1.5, color: CHAIN_COLORS[i % CHAIN_COLORS.length] },
+        line: { width: 1.5, color: colors[i % colors.length] },
       };
     });
     const layout = {

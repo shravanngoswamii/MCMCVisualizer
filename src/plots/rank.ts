@@ -1,6 +1,6 @@
 import type { InferenceData } from '../types';
 import type { PlotOptions, PlotHandle } from './types';
-import { getPlotly, getLayout, getConfig, CHAIN_COLORS } from './types';
+import { getPlotly, getLayout, getConfig, CHAIN_COLORS, resolveChainColors } from './types';
 
 export function rankPlot(
   container: HTMLElement,
@@ -12,6 +12,7 @@ export function rankPlot(
   let currentVar = variable;
 
   function render() {
+    const colors = resolveChainColors(options);
     const allDraws: number[] = [];
     const chainDraws: Float64Array[] = [];
     for (const chain of data.chainNames) {
@@ -40,7 +41,7 @@ export function rankPlot(
         name: chain,
         nbinsx: nBins,
         opacity: 0.6,
-        marker: { color: CHAIN_COLORS[ci % CHAIN_COLORS.length] },
+        marker: { color: colors[ci % colors.length] },
       };
     });
 

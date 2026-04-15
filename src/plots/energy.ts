@@ -1,6 +1,6 @@
 import type { InferenceData } from '../types';
 import type { PlotOptions, PlotHandle } from './types';
-import { getPlotly, getLayout, getConfig, CHAIN_COLORS } from './types';
+import { getPlotly, getLayout, getConfig, CHAIN_COLORS, resolveChainColors } from './types';
 
 export function energyPlot(
   container: HTMLElement,
@@ -10,6 +10,7 @@ export function energyPlot(
   const Plotly = getPlotly();
 
   function render() {
+    const colors = resolveChainColors(options);
     const hasEnergy = data.variableNames.some(
       v => v === 'energy__' || v === 'energy' || v === 'lp__' || v === 'log_density'
     );
@@ -38,7 +39,7 @@ export function energyPlot(
         type: 'histogram' as const,
         name: `${chain} (marginal)`,
         opacity: 0.5,
-        marker: { color: CHAIN_COLORS[i % CHAIN_COLORS.length] },
+        marker: { color: colors[i % colors.length] },
         histnorm: 'probability density' as const,
       });
 
@@ -53,8 +54,8 @@ export function energyPlot(
           name: `${chain} (transition)`,
           opacity: 0.3,
           marker: {
-            color: CHAIN_COLORS[i % CHAIN_COLORS.length],
-            line: { color: CHAIN_COLORS[i % CHAIN_COLORS.length], width: 1 },
+            color: colors[i % colors.length],
+            line: { color: colors[i % colors.length], width: 1 },
           },
           histnorm: 'probability density' as const,
         });

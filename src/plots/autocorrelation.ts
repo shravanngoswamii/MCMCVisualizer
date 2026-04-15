@@ -1,6 +1,6 @@
 import type { InferenceData } from '../types';
 import type { PlotOptions, PlotHandle } from './types';
-import { getPlotly, getLayout, getConfig, CHAIN_COLORS } from './types';
+import { getPlotly, getLayout, getConfig, CHAIN_COLORS, resolveChainColors } from './types';
 
 export function autocorrelationPlot(
   container: HTMLElement,
@@ -30,6 +30,7 @@ export function autocorrelationPlot(
   }
 
   function render() {
+    const colors = resolveChainColors(options);
     const lags = Array.from({ length: MAX_LAG + 1 }, (_, i) => i);
     const traces = data.chainNames.map((chain, i) => {
       const draws = data.getDraws(currentVar, chain);
@@ -39,7 +40,7 @@ export function autocorrelationPlot(
         y: values,
         type: 'bar' as const,
         name: chain,
-        marker: { color: CHAIN_COLORS[i % CHAIN_COLORS.length] },
+        marker: { color: colors[i % colors.length] },
         opacity: 0.7,
       };
     });

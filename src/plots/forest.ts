@@ -1,6 +1,6 @@
 import type { InferenceData } from '../types';
 import type { PlotOptions, PlotHandle } from './types';
-import { getPlotly, getLayout, getConfig, CHAIN_COLORS } from './types';
+import { getPlotly, getLayout, getConfig, CHAIN_COLORS, resolveChainColors } from './types';
 
 export function forestPlot(
   container: HTMLElement,
@@ -10,6 +10,7 @@ export function forestPlot(
   const Plotly = getPlotly();
 
   function render() {
+    const colors = resolveChainColors(options);
     const summaries = data.summary();
     const vars = summaries.map(s => s.variable);
     const means = summaries.map(s => s.mean);
@@ -19,7 +20,7 @@ export function forestPlot(
       y: vars,
       type: 'scatter' as const,
       mode: 'markers' as const,
-      marker: { size: 9, color: CHAIN_COLORS[0], symbol: 'diamond' },
+      marker: { size: 9, color: colors[0], symbol: 'diamond' },
       error_x: {
         type: 'data' as const,
         symmetric: false,
@@ -27,7 +28,7 @@ export function forestPlot(
         arrayminus: summaries.map(s => s.mean - s.hdi90[0]),
         thickness: 1.5,
         width: 0,
-        color: CHAIN_COLORS[0],
+        color: colors[0],
       },
       name: '90% HDI',
       showlegend: true,
@@ -46,7 +47,7 @@ export function forestPlot(
         arrayminus: summaries.map(s => s.mean - s.quantiles.q25),
         thickness: 5,
         width: 0,
-        color: CHAIN_COLORS[0],
+        color: colors[0],
       },
       name: '50% CI (IQR)',
       showlegend: true,

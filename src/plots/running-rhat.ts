@@ -1,6 +1,6 @@
 import type { InferenceData } from '../types';
 import type { PlotOptions, PlotHandle } from './types';
-import { getPlotly, getLayout, getConfig, CHAIN_COLORS } from './types';
+import { getPlotly, getLayout, getConfig, CHAIN_COLORS, resolveChainColors } from './types';
 import { computeMean, computeStdev } from '../stats/summary';
 
 export function runningRhatPlot(
@@ -13,6 +13,7 @@ export function runningRhatPlot(
   let currentVar = variable;
 
   function render() {
+    const colors = resolveChainColors(options);
     const chains = data.chainNames.map(c => data.getDraws(currentVar, c));
     const minLen = Math.min(...chains.map(c => c.length));
     const step = Math.max(1, Math.floor(minLen / 200));
@@ -40,7 +41,7 @@ export function runningRhatPlot(
       type: 'scatter' as const,
       mode: 'lines' as const,
       name: 'R\u0302',
-      line: { width: 2, color: CHAIN_COLORS[0] },
+      line: { width: 2, color: colors[0] },
     }];
 
     const layout = {

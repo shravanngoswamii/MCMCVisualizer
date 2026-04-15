@@ -1,6 +1,6 @@
 import type { InferenceData } from '../types';
 import type { PlotOptions, PlotHandle } from './types';
-import { getPlotly, getLayout, getConfig, CHAIN_COLORS } from './types';
+import { getPlotly, getLayout, getConfig, CHAIN_COLORS, resolveChainColors } from './types';
 
 export function pairPlot(
   container: HTMLElement,
@@ -12,6 +12,7 @@ export function pairPlot(
   const vars = variables ?? data.variableNames.slice(0, 4);
 
   function render() {
+    const colors = resolveChainColors(options);
     const dimensions = vars.map(v => ({
       label: v,
       values: Array.from(data.getAllDraws(v)),
@@ -29,22 +30,23 @@ export function pairPlot(
         marker: {
           size: 2,
           opacity: 0.3,
-          color: CHAIN_COLORS[i % CHAIN_COLORS.length],
+          color: colors[i % colors.length],
         },
         showupperhalf: false,
         diagonal: { visible: true },
       };
     });
 
-    const axisCfg = (theme: string | undefined) => {
-      const isDark = theme !== 'light';
-      return { gridcolor: isDark ? '#252836' : '#e5e7eb', linecolor: isDark ? '#333' : '#d1d5db' };
-    };
+    const isDark = !options?.theme || options.theme !== 'light';
+    const axisCfg = () => ({
+      gridcolor: isDark ? '#252836' : '#e5e7eb',
+      linecolor: isDark ? '#333' : '#d1d5db',
+    });
 
     const axisOverrides: Record<string, unknown> = {};
     for (let i = 1; i <= vars.length; i++) {
-      axisOverrides[`xaxis${i > 1 ? i : ''}`] = axisCfg(options?.theme);
-      axisOverrides[`yaxis${i > 1 ? i : ''}`] = axisCfg(options?.theme);
+      axisOverrides[`xaxis${i > 1 ? i : ''}`] = axisCfg();
+      axisOverrides[`yaxis${i > 1 ? i : ''}`] = axisCfg();
     }
 
     const layout = {

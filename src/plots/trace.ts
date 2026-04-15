@@ -9,7 +9,7 @@
 
 import type { InferenceData } from '../types';
 import type { PlotOptions, PlotHandle, PlotSpec } from './types';
-import { getPlotly, getLayout, getConfig, CHAIN_COLORS } from './types';
+import { getPlotly, getLayout, getConfig, CHAIN_COLORS, resolveChainColors } from './types';
 
 // ============================================================================
 // Framework-agnostic spec
@@ -26,7 +26,7 @@ export function tracePlotSpec(
     type: 'scatter' as const,
     mode: 'lines'   as const,
     name: chain,
-    line: { width: 0.8, color: CHAIN_COLORS[i % CHAIN_COLORS.length] },
+    line: { width: 0.8, color: resolveChainColors(options)[i % resolveChainColors(options).length] },
   }));
 
   const base = getLayout(options);

@@ -1,6 +1,6 @@
 import type { InferenceData } from '../types';
 import type { PlotOptions, PlotHandle } from './types';
-import { getPlotly, getLayout, getConfig, CHAIN_COLORS } from './types';
+import { getPlotly, getLayout, getConfig, CHAIN_COLORS, resolveChainColors } from './types';
 
 export function densityPlot(
   container: HTMLElement,
@@ -62,6 +62,7 @@ export function densityPlot(
   }
 
   function render() {
+    const colors = resolveChainColors(options);
     const traces = data.chainNames.map((chain, i) => {
       const draws = data.getDraws(currentVar, chain);
       const { x, y } = kde(draws);
@@ -71,8 +72,8 @@ export function densityPlot(
         mode: 'lines' as const,
         name: chain,
         fill: 'tozeroy' as const,
-        fillcolor: CHAIN_COLORS[i % CHAIN_COLORS.length]!.replace(')', ',0.12)').replace('rgb', 'rgba'),
-        line: { width: 2, color: CHAIN_COLORS[i % CHAIN_COLORS.length] },
+        fillcolor: colors[i % colors.length]!.replace(')', ',0.12)').replace('rgb', 'rgba'),
+        line: { width: 2, color: colors[i % colors.length] },
       };
     });
 

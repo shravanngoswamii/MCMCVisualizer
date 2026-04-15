@@ -1,6 +1,6 @@
 import type { InferenceData } from '../types';
 import type { PlotOptions, PlotHandle } from './types';
-import { getPlotly, getLayout, getConfig, CHAIN_COLORS } from './types';
+import { getPlotly, getLayout, getConfig, CHAIN_COLORS, resolveChainColors } from './types';
 import { computeMean, computeHDI } from '../stats/summary';
 
 export function chainIntervalsPlot(
@@ -13,6 +13,7 @@ export function chainIntervalsPlot(
   let currentVar = variable;
 
   function render() {
+    const colors = resolveChainColors(options);
     const chainSummaries = data.chainNames.map((chain, index) => {
       const draws = data.getDraws(currentVar, chain);
       const mean = computeMean(draws);
@@ -21,7 +22,7 @@ export function chainIntervalsPlot(
         chain,
         mean,
         hdi90,
-        color: CHAIN_COLORS[index % CHAIN_COLORS.length],
+        color: colors[index % colors.length],
       };
     });
 

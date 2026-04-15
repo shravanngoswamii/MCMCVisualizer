@@ -1,6 +1,6 @@
 import type { InferenceData } from '../types';
 import type { PlotOptions, PlotHandle } from './types';
-import { getPlotly, getLayout, getConfig, CHAIN_COLORS } from './types';
+import { getPlotly, getLayout, getConfig, CHAIN_COLORS, resolveChainColors } from './types';
 
 export function histogramPlot(
   container: HTMLElement,
@@ -12,12 +12,13 @@ export function histogramPlot(
   let currentVar = variable;
 
   function render() {
+    const colors = resolveChainColors(options);
     const traces = data.chainNames.map((chain, i) => ({
       x: Array.from(data.getDraws(currentVar, chain)),
       type: 'histogram' as const,
       name: chain,
       opacity: 0.6,
-      marker: { color: CHAIN_COLORS[i % CHAIN_COLORS.length] },
+      marker: { color: colors[i % colors.length] },
     }));
     const layout = {
       ...getLayout(options),

@@ -17,7 +17,8 @@ export type {
   FileFormat,
 } from './types';
 
-export type { PlotOptions, PlotHandle, PlotSpec } from './plots/types';
+export type { PlotOptions, PlotHandle, PlotSpec, CustomTheme } from './plots/types';
+export { BAYES_DARK_THEME } from './plots/types';
 export type { RhatKind } from './stats/rhat';
 
 // ============================================================================

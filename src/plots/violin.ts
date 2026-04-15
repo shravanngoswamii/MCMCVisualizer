@@ -1,6 +1,6 @@
 import type { InferenceData } from '../types';
 import type { PlotOptions, PlotHandle } from './types';
-import { getPlotly, getLayout, getConfig, CHAIN_COLORS } from './types';
+import { getPlotly, getLayout, getConfig, CHAIN_COLORS, resolveChainColors } from './types';
 
 export function violinPlot(
   container: HTMLElement,
@@ -10,6 +10,7 @@ export function violinPlot(
   const Plotly = getPlotly();
 
   function render() {
+    const colors = resolveChainColors(options);
     const traces = data.variableNames.map((varName, vi) => {
       const allDraws = Array.from(data.getAllDraws(varName));
       return {
@@ -18,8 +19,8 @@ export function violinPlot(
         name: varName,
         box: { visible: true },
         meanline: { visible: true },
-        line: { color: CHAIN_COLORS[vi % CHAIN_COLORS.length] },
-        fillcolor: CHAIN_COLORS[vi % CHAIN_COLORS.length]!.replace(')', ',0.3)').replace('rgb', 'rgba'),
+        line: { color: colors[vi % colors.length] },
+        fillcolor: colors[vi % colors.length]!.replace(')', ',0.3)').replace('rgb', 'rgba'),
         opacity: 0.85,
         spanmode: 'soft' as const,
       };
