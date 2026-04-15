@@ -1,16 +1,24 @@
 {
   "name": "mcmc-visualizer",
   "version": "0.1.0",
-  "description": "Parse, analyze, plot, and export MCMC sampling data. Supports Turing CSV, Stan CSV formats with built-in diagnostics (ESS, R-hat, HDI) and interactive Plotly.js visualizations.",
+  "description": "Parse, analyze, plot, and export MCMC sampling data. Supports ArviZ JSON, Turing CSV, Stan CSV, and MCMCChains formats with production-grade diagnostics (ESS bulk/tail, rank R-hat, MCSE, HDI) and interactive Plotly.js visualizations.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "mcmc": "./dist/cli/index.cjs"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./plots": {
+      "types": "./dist/plots/index.d.ts",
+      "import": "./dist/plots/index.js",
+      "require": "./dist/plots/index.cjs"
     }
   },
   "files": [
@@ -20,8 +28,10 @@
     "build": "tsup",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "tsc --noEmit",
-    "prepublishOnly": "npm run build"
+    "format": "biome format --write src tests",
+    "lint": "tsc --noEmit && biome lint src",
+    "check": "biome check --write src",
+    "prepublishOnly": "npm run build && npm run lint"
   },
   "keywords": [
     "mcmc",
@@ -35,7 +45,11 @@
     "diagnostics",
     "sampling",
     "plotly",
-    "visualization"
+    "visualization",
+    "inference-data",
+    "pymc",
+    "numpyro",
+    "posterior"
   ],
   "license": "MIT",
   "peerDependencies": {
@@ -47,6 +61,8 @@
     }
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.12",
+    "@types/node": "^20.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.4.0",
     "vitest": "^2.0.0"

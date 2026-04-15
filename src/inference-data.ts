@@ -5,7 +5,7 @@ import type {
   VariableStats,
   VariableSummary,
 } from './types';
-import { computeESS } from './stats/ess';
+import { computeESS, computeEssBulk, computeEssTail } from './stats/ess';
 import { computeRhat } from './stats/rhat';
 import {
   computeMean,
@@ -15,7 +15,7 @@ import {
   computeSkewness,
   computeExcessKurtosis,
 } from './stats/summary';
-import { computeMCSE, computeBulkESS, computeTailESS } from './stats/mcse';
+import { computeMCSE, computeMCSEMultiChain } from './stats/mcse';
 import { computeGeweke } from './stats/geweke';
 import { computeSplitRhat } from './stats/split-rhat';
 import { toTuringCSV, toMCMCChainsCSV, toStanCSV, toWideCSV, toJSON, toMCMCChainsJSON } from './exporters';
@@ -113,10 +113,15 @@ export class MCMCData implements InferenceData {
     const allDraws = this.getAllDraws(variable);
     const quantiles = computeQuantiles(allDraws);
     const hdi90 = computeHDI(allDraws, 0.9);
-    const rhat = computeRhat(chainMeans, chainStdevs, chainCounts);
-    const mcse = computeMCSE(allDraws);
-    const bulkEss = computeBulkESS(chainDraws);
-    const tailEss = computeTailESS(chainDraws);
+    // Use proper rank-normalised multi-chain R-hat (Vehtari et al. 2021)
+    const rhat = chainDraws.length >= 2 ? computeRhat(chainDraws, 'rank') : undefined;
+    // MCSE using multi-chain bulk ESS for better accuracy across chains
+    const mcse = chainDraws.length >= 2
+      ? computeMCSEMultiChain(chainDraws)
+      : computeMCSE(allDraws);
+    // Proper multi-chain bulk/tail ESS with split chains (Geyer estimator)
+    const bulkEss = computeEssBulk(chainDraws);
+    const tailEss = computeEssTail(chainDraws);
     const splitRhat = computeSplitRhat(chainDraws);
     const geweke = computeGeweke(allDraws);
 

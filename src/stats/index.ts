@@ -1,5 +1,6 @@
-export { computeESS } from './ess';
+export { computeESS, computeEssBulk, computeEssTail, computeEssBasic } from './ess';
 export { computeRhat } from './rhat';
+export type { RhatKind } from './rhat';
 export {
   computeMean,
   computeStdev,
@@ -8,6 +9,6 @@ export {
   computeSkewness,
   computeExcessKurtosis,
 } from './summary';
-export { computeMCSE, computeBulkESS, computeTailESS } from './mcse';
+export { computeMCSE, computeMCSEMultiChain, computeMCSEQuantile, computeMCSEStd } from './mcse';
 export { computeGeweke } from './geweke';
 export { computeSplitRhat } from './split-rhat';

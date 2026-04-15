@@ -33,6 +33,7 @@ export function splitLines(text: string): string[] {
   return text.split(/\r?\n/).filter(line => line.trim().length > 0);
 }
 
+export const computeQuantile = quantile;
 export function quantile(sorted: Float64Array, q: number): number {
   if (sorted.length === 0) return NaN;
   if (sorted.length === 1) return sorted[0]!;
