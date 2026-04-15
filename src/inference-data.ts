@@ -119,9 +119,12 @@ export class MCMCData implements InferenceData {
     const mcse = chainDraws.length >= 2
       ? computeMCSEMultiChain(chainDraws)
       : computeMCSE(allDraws);
-    // Proper multi-chain bulk/tail ESS with split chains (Geyer estimator)
-    const bulkEss = computeEssBulk(chainDraws);
-    const tailEss = computeEssTail(chainDraws);
+    // Proper multi-chain bulk/tail ESS with split chains (Geyer estimator).
+    // Falls back to summed single-chain ESS when chains are too short to split.
+    const bulkEssRaw = computeEssBulk(chainDraws);
+    const tailEssRaw = computeEssTail(chainDraws);
+    const bulkEss = isFinite(bulkEssRaw) ? bulkEssRaw : totalESS;
+    const tailEss = isFinite(tailEssRaw) ? tailEssRaw : totalESS;
     const splitRhat = computeSplitRhat(chainDraws);
     const geweke = computeGeweke(allDraws);
 

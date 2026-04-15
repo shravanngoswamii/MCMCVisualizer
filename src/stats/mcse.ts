@@ -17,12 +17,16 @@ export function computeMCSE(draws: Float64Array): number {
   return sd / Math.sqrt(ess);
 }
 
-/** MCSE of the mean across multiple chains using bulk ESS. */
+/** MCSE of the mean across multiple chains using bulk ESS.
+ *  Falls back to pooled single-chain MCSE when chains are too short for bulk ESS. */
 export function computeMCSEMultiChain(chains: Float64Array[]): number {
   if (chains.length === 0) return NaN;
   const all = _concat(chains);
-  const sd  = computeStdev(all), ess = computeEssBulk(chains);
-  if (!isFinite(sd) || !isFinite(ess) || ess <= 0) return NaN;
+  const sd  = computeStdev(all);
+  if (!isFinite(sd)) return NaN;
+  const ess = computeEssBulk(chains);
+  // Fall back to single-chain IMSE-based MCSE when chains are too short to split
+  if (!isFinite(ess) || ess <= 0) return computeMCSE(all);
   return sd / Math.sqrt(ess);
 }
 
