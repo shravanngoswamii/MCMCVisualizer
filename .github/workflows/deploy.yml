@@ -26,14 +26,30 @@ jobs:
       - name: Build package
         run: npm run build
 
+      - name: Install workflow demo dependencies
+        working-directory: examples/bayes-workflow-demo
+        run: npm ci
+
+      - name: Build workflow demo
+        working-directory: examples/bayes-workflow-demo
+        run: npm run build
+
       - name: Prepare deploy directory
         run: |
           mkdir -p deploy/dist
+
+          # Package dist (needed by the vanilla demo)
           cp dist/index.js dist/index.js.map deploy/dist/
           cp dist/index.cjs dist/index.cjs.map deploy/dist/
           cp dist/index.d.ts dist/index.d.cts deploy/dist/
+
+          # Vanilla demo at root
           cp examples/demo/index.html deploy/index.html
           sed -i "s|../../dist/index.js|./dist/index.js|g" deploy/index.html
+
+          # Vue workflow demo at /workflow/
+          mkdir -p deploy/workflow
+          cp -r examples/bayes-workflow-demo/dist/. deploy/workflow/
 
       - name: Deploy to gh-pages
         uses: JamesIves/github-pages-deploy-action@v4
@@ -41,4 +57,4 @@ jobs:
           branch: gh-pages
           folder: ./deploy
           clean-exclude: pr-previews
-          commit-message: Deploy MCMCVisualizer demo and package
+          commit-message: "Deploy: package demo + workflow demo"

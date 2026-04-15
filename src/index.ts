@@ -48,7 +48,7 @@ export function fromArviZJSON(input: string | object): InferenceData {
   return new MCMCData(parseArviZJSONPosterior(input));
 }
 
-/** Load from Coinfer / Turing.jl CSV (long or wide format). */
+/** Load from a Turing.jl CSV (long or wide format). */
 export function fromTuringCSV(text: string): InferenceData {
   return new MCMCData(parseTuringCSV(text));
 }

@@ -53,7 +53,7 @@ const EXPORT_TAB_FORMAT = [
 ].join('\n');
 
 describe('parseTuringCSV', () => {
-  it('parses long format (Coinfer native)', () => {
+  it('parses long format (chain_name, var_name, iteration, value)', () => {
     const data = fromTuringCSV(LONG_FORMAT);
     expect(data.chainNames).toHaveLength(2);
     expect(data.variableNames).toContain('alpha');
