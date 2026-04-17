@@ -1,68 +1,66 @@
-/**
- * Trace plot — sequential parameter values per chain over iterations.
- *
- * Two entry points:
- *   tracePlotSpec()  — returns a plain PlotSpec object. No DOM, no Plotly.
- *                      Works in Node.js, CLI, React/Vue wrappers, AI agents.
- *   tracePlot()      — renders directly to an HTMLElement (browser only).
- */
-
 import type { InferenceData } from '../types';
 import type { PlotOptions, PlotHandle, PlotSpec } from './types';
-import { getPlotly, getLayout, getConfig, CHAIN_COLORS, resolveChainColors } from './types';
+import { getPlotly, getLayout, getConfig, resolveChainColors } from './types';
+import type { TracePlotData } from './data-types';
 
-// ============================================================================
-// Framework-agnostic spec
-// ============================================================================
+/** Compute trace plot data — no DOM, no Plotly. Pass to any renderer. */
+export function getTracePlotData(
+  data:     InferenceData,
+  variable: string,
+  opts?:    PlotOptions,
+): TracePlotData {
+  const colors = resolveChainColors(opts);
+  return {
+    variable,
+    series: data.chainNames.map((chain, i) => ({
+      chain,
+      iterations: Array.from({ length: data.getDraws(variable, chain).length }, (_, j) => j + 1),
+      values:     data.getDraws(variable, chain),
+      color:      colors[i % colors.length] ?? '#636EFA',
+    })),
+  };
+}
 
-/** Build a Plotly trace-plot spec without touching the DOM or requiring Plotly. */
+/** Plotly JSON spec — no DOM required. */
 export function tracePlotSpec(
   data:     InferenceData,
   variable: string,
-  options?: PlotOptions,
+  opts?:    PlotOptions,
 ): PlotSpec {
-  const traces = data.chainNames.map((chain, i) => ({
-    y:    Array.from(data.getDraws(variable, chain)),
-    type: 'scatter' as const,
-    mode: 'lines'   as const,
-    name: chain,
-    line: { width: 0.8, color: resolveChainColors(options)[i % resolveChainColors(options).length] },
-  }));
-
-  const base = getLayout(options);
-  const layout = {
-    ...base,
-    title:  { text: `Trace: ${variable}` },
-    xaxis:  { ...(base['xaxis'] as object), title: { text: 'Iteration' } },
-    yaxis:  { ...(base['yaxis'] as object), title: { text: variable } },
-    legend: { orientation: 'h' as const, y: -0.15 },
+  const { series } = getTracePlotData(data, variable, opts);
+  const base = getLayout(opts);
+  return {
+    data: series.map(s => ({
+      x: s.iterations, y: Array.from(s.values),
+      type: 'scatter' as const, mode: 'lines' as const,
+      name: s.chain, line: { width: 0.8, color: s.color },
+    })),
+    layout: {
+      ...base,
+      title:  { text: `Trace: ${variable}` },
+      xaxis:  { ...(base['xaxis'] as object), title: { text: 'Iteration' } },
+      yaxis:  { ...(base['yaxis'] as object), title: { text: variable } },
+      legend: { orientation: 'h' as const, y: -0.15 },
+    },
+    config: getConfig(),
   };
-
-  return { data: traces, layout, config: getConfig() };
 }
 
-// ============================================================================
-// DOM-rendering version (browser only)
-// ============================================================================
-
-/** Render a trace plot into an HTMLElement. Returns a handle for updates/cleanup. */
+/** Render into an HTMLElement (Plotly adapter). */
 export function tracePlot(
   container: HTMLElement,
   data:      InferenceData,
   variable:  string,
-  options?:  PlotOptions,
+  opts?:     PlotOptions,
 ): PlotHandle {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const Plotly = getPlotly() as any;
   let currentVar = variable;
-
-  function render(): void {
-    const spec = tracePlotSpec(data, currentVar, options);
+  const render = () => {
+    const spec = tracePlotSpec(data, currentVar, opts);
     Plotly.react(container, spec.data, spec.layout, spec.config);
-  }
-
+  };
   render();
-
   return {
     destroy: () => Plotly.purge(container),
     update:  (v?: string) => { if (v) currentVar = v; render(); },

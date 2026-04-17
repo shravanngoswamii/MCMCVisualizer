@@ -133,6 +133,12 @@ export {
 } from './stats/summary';
 
 // ============================================================================
-// Plot namespace (Spec functions work without DOM / Plotly)
+// Serialization (generic JSON only — format-specific exports removed)
+// ============================================================================
+export { toJSON } from './exporters';
+
+// ============================================================================
+// Plot data functions (no DOM, no Plotly — pass to any renderer)
+// Plot DOM adapters (Plotly convenience wrappers, optional)
 // ============================================================================
 export * as plots from './plots';

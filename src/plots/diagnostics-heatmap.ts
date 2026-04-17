@@ -1,6 +1,20 @@
 import type { VariableSummary, InferenceData } from '../types';
 import type { PlotOptions, PlotHandle } from './types';
+import type { DiagnosticsHeatmapData } from './data-types';
 import { getPlotly, getLayout, getConfig } from './types';
+
+export function getDiagnosticsHeatmapData(
+  data: InferenceData,
+): DiagnosticsHeatmapData {
+  const summaries = data.summary();
+  const rows = summaries.map(s => ({
+    variable: s.variable,
+    essBulk:  s.bulkEss,
+    essTail:  s.tailEss,
+    rhat:     s.rhat ?? NaN,
+  }));
+  return { rows };
+}
 
 export function diagnosticsHeatmapPlot(
   container: HTMLElement,

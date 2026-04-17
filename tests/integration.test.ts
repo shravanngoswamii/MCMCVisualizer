@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fromTuringCSV, fromStanCSVFiles, fromChainArrays, fromAutoDetect, fromMCMCChainsJSON, detectFormat } from '../src/index';
+import { fromTuringCSV, fromStanCSVFiles, fromChainArrays, fromAutoDetect, fromMCMCChainsJSON, detectFormat, toJSON } from '../src/index';
 
 const TURING_DATA = [
   'chain#1,mu,0,1.5',
@@ -44,29 +44,9 @@ describe('InferenceData integration', () => {
     expect(muSummary!.geweke.z).toBeTypeOf('number');
   });
 
-  it('exports to Turing CSV round-trip', () => {
+  it('serializes to JSON via standalone toJSON()', () => {
     const data = fromTuringCSV(TURING_DATA);
-    const csv = data.toTuringCSV();
-    const data2 = fromTuringCSV(csv);
-    expect(data2.chainNames).toEqual(data.chainNames);
-    expect(data2.variableNames.sort()).toEqual(data.variableNames.sort());
-    const original = data.getDraws('mu', 'chain#1');
-    const roundTripped = data2.getDraws('mu', 'chain#1');
-    for (let i = 0; i < original.length; i++) {
-      expect(roundTripped[i]).toBeCloseTo(original[i]!, 10);
-    }
-  });
-
-  it('exports to wide CSV', () => {
-    const data = fromTuringCSV(TURING_DATA);
-    const csv = data.toWideCSV();
-    expect(csv).toContain('chain_,draw_');
-    expect(csv.split('\n').length).toBe(11);
-  });
-
-  it('exports to JSON', () => {
-    const data = fromTuringCSV(TURING_DATA);
-    const json = data.toJSON();
+    const json = toJSON(data);
     const parsed = JSON.parse(json);
     expect(parsed['chain#1']).toBeDefined();
     expect(parsed['chain#1']['mu']).toHaveLength(5);
@@ -116,26 +96,12 @@ describe('InferenceData integration', () => {
     expect(stats.essPerDraw).toBeGreaterThanOrEqual(0);
   });
 
-  it('exports to MCMCChains CSV round-trip', () => {
+  it('JSON round-trip via toJSON + fromChainArrays', () => {
     const data = fromTuringCSV(TURING_DATA);
-    const csv = data.toMCMCChainsCSV();
-    expect(csv).toContain('iteration,chain');
-    const data2 = fromAutoDetect(csv);
-    expect(data2.chainNames).toHaveLength(2);
-    expect(data2.variableNames.sort()).toEqual(data.variableNames.sort());
-    const orig = data.getDraws('mu', 'chain#1');
-    const rt = data2.getDraws('mu', 'chain#1');
-    expect(rt.length).toBe(orig.length);
-    for (let i = 0; i < orig.length; i++) {
-      expect(rt[i]).toBeCloseTo(orig[i]!, 10);
-    }
-  });
-
-  it('exports to MCMCChains JSON round-trip', () => {
-    const data = fromTuringCSV(TURING_DATA);
-    const json = data.toMCMCChainsJSON();
-    const data2 = fromMCMCChainsJSON(json);
-    expect(data2.chainNames).toHaveLength(2);
+    const json = toJSON(data);
+    const parsed = JSON.parse(json) as Record<string, Record<string, number[]>>;
+    const data2 = fromChainArrays(parsed);
+    expect(data2.chainNames.sort()).toEqual(data.chainNames.sort());
     expect(data2.variableNames.sort()).toEqual(data.variableNames.sort());
     const orig = data.getDraws('sigma', 'chain#2');
     const rt = data2.getDraws('sigma', 'chain#2');
@@ -143,15 +109,5 @@ describe('InferenceData integration', () => {
     for (let i = 0; i < orig.length; i++) {
       expect(rt[i]).toBeCloseTo(orig[i]!, 10);
     }
-  });
-
-  it('autodetects MCMCChains JSON format', () => {
-    const data = fromChainArrays({
-      'chain#1': { x: [1, 2, 3] },
-    });
-    const json = data.toMCMCChainsJSON();
-    expect(detectFormat(json)).toBe('mcmcchains-json');
-    const data2 = fromAutoDetect(json);
-    expect(data2.variableNames).toContain('x');
   });
 });

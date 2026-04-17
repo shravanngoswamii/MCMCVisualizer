@@ -18,7 +18,6 @@ import {
 import { computeMCSE, computeMCSEMultiChain } from './stats/mcse';
 import { computeGeweke } from './stats/geweke';
 import { computeSplitRhat } from './stats/split-rhat';
-import { toTuringCSV, toMCMCChainsCSV, toStanCSV, toWideCSV, toJSON, toMCMCChainsJSON } from './exporters';
 
 export class MCMCData implements InferenceData {
   readonly chains: ReadonlyMap<string, ChainData>;
@@ -153,30 +152,6 @@ export class MCMCData implements InferenceData {
       variable,
       ...this.variableStats(variable),
     }));
-  }
-
-  toTuringCSV(): string {
-    return toTuringCSV(this);
-  }
-
-  toMCMCChainsCSV(): string {
-    return toMCMCChainsCSV(this);
-  }
-
-  toStanCSV(): string {
-    return toStanCSV(this);
-  }
-
-  toWideCSV(): string {
-    return toWideCSV(this);
-  }
-
-  toJSON(): string {
-    return toJSON(this);
-  }
-
-  toMCMCChainsJSON(): string {
-    return toMCMCChainsJSON(this);
   }
 
   slice(start: number, end?: number): InferenceData {

@@ -1,6 +1,24 @@
 import type { InferenceData } from '../types';
 import type { PlotOptions, PlotHandle } from './types';
-import { getPlotly, getLayout, getConfig, CHAIN_COLORS, resolveChainColors } from './types';
+import type { ForestPlotData } from './data-types';
+import { getPlotly, getLayout, getConfig, resolveChainColors } from './types';
+
+export function getForestPlotData(
+  data: InferenceData,
+  opts?: PlotOptions,
+): ForestPlotData {
+  const colors = resolveChainColors(opts);
+  const summaries = data.summary();
+  const rows = summaries.map(s => ({
+    variable: s.variable,
+    mean:     s.mean,
+    hdiLow:   s.hdi90[0],
+    hdiHigh:  s.hdi90[1],
+    rhat:     s.rhat ?? NaN,
+    essBulk:  s.bulkEss,
+  }));
+  return { rows, color: colors[0]! };
+}
 
 export function forestPlot(
   container: HTMLElement,
@@ -10,25 +28,28 @@ export function forestPlot(
   const Plotly = getPlotly();
 
   function render() {
-    const colors = resolveChainColors(options);
+    const plotData = getForestPlotData(data, options);
+    const { rows, color } = plotData;
+    const vars  = rows.map(r => r.variable);
+    const means = rows.map(r => r.mean);
+
+    // Retrieve full summaries for IQR trace (q25/q75 not in ForestPlotData rows)
     const summaries = data.summary();
-    const vars = summaries.map(s => s.variable);
-    const means = summaries.map(s => s.mean);
 
     const hdiTrace = {
       x: means,
       y: vars,
       type: 'scatter' as const,
       mode: 'markers' as const,
-      marker: { size: 9, color: colors[0], symbol: 'diamond' },
+      marker: { size: 9, color, symbol: 'diamond' },
       error_x: {
         type: 'data' as const,
         symmetric: false,
-        array: summaries.map(s => s.hdi90[1] - s.mean),
-        arrayminus: summaries.map(s => s.mean - s.hdi90[0]),
+        array: rows.map(r => r.hdiHigh - r.mean),
+        arrayminus: rows.map(r => r.mean - r.hdiLow),
         thickness: 1.5,
         width: 0,
-        color: colors[0],
+        color,
       },
       name: '90% HDI',
       showlegend: true,
@@ -47,7 +68,7 @@ export function forestPlot(
         arrayminus: summaries.map(s => s.mean - s.quantiles.q25),
         thickness: 5,
         width: 0,
-        color: colors[0],
+        color,
       },
       name: '50% CI (IQR)',
       showlegend: true,

@@ -1,6 +1,6 @@
 import type { InferenceData } from '../types';
 import type { PlotOptions, PlotHandle } from './types';
-import { getPlotly, getLayout, getConfig, CHAIN_COLORS, resolveChainColors } from './types';
+import { getPlotly, getLayout, getConfig, resolveChainColors } from './types';
 
 export function pairPlot(
   container: HTMLElement,

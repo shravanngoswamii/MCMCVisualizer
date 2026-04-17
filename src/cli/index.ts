@@ -106,15 +106,16 @@ function runEss(data: InferenceData, fmt: string): string {
   return renderTable(['variable', 'essBulk', 'essTail', 'essPerDraw', 'count'], rows);
 }
 
-function runConvert(data: InferenceData, to: string): string {
-  switch (to) {
-    case 'turing-csv':      return data.toTuringCSV();
-    case 'mcmcchains-csv':  return data.toMCMCChainsCSV();
-    case 'stan-csv':        return data.toStanCSV();
-    case 'wide-csv':        return data.toWideCSV();
-    case 'mcmcchains-json': return data.toMCMCChainsJSON();
-    default:                return data.toJSON();
+function runConvert(data: InferenceData, _to: string): string {
+  // Format-specific exports removed — only generic JSON supported
+  const result: Record<string, Record<string, number[]>> = {};
+  for (const chain of data.chainNames) {
+    result[chain] = {};
+    for (const v of data.variableNames) {
+      result[chain][v] = Array.from(data.getDraws(v, chain));
+    }
   }
+  return JSON.stringify(result, null, 2);
 }
 
 function runPlot(data: InferenceData, type: string, variable: string, flags: Flags): string {

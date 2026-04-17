@@ -1,7 +1,38 @@
 import type { InferenceData } from '../types';
 import type { PlotOptions, PlotHandle } from './types';
-import { getPlotly, getLayout, getConfig, CHAIN_COLORS, resolveChainColors } from './types';
+import type { RunningRhatData } from './data-types';
+import { getPlotly, getLayout, getConfig, resolveChainColors } from './types';
 import { computeMean, computeStdev } from '../stats/summary';
+
+export function getRunningRhatData(
+  data: InferenceData,
+  variable: string,
+  opts?: PlotOptions,
+): RunningRhatData {
+  const colors = resolveChainColors(opts);
+  const chains = data.chainNames.map(c => data.getDraws(variable, c));
+  const minLen = Math.min(...chains.map(c => c.length));
+  const step = Math.max(1, Math.floor(minLen / 200));
+  const startAt = Math.max(20, step);
+
+  const iterations: number[] = [];
+  const rhat: number[] = [];
+
+  for (let n = startAt; n <= minLen; n += step) {
+    const sliced = chains.map(c => c.slice(0, n));
+    const means = sliced.map(c => computeMean(c));
+    const sds = sliced.map(c => computeStdev(c));
+    const counts = sliced.map(c => c.length);
+
+    const r = computeRhatFromParts(means, sds, counts);
+    if (r !== undefined && !isNaN(r)) {
+      iterations.push(n);
+      rhat.push(r);
+    }
+  }
+
+  return { variable, iterations, rhat, color: colors[0]! };
+}
 
 export function runningRhatPlot(
   container: HTMLElement,
@@ -13,35 +44,16 @@ export function runningRhatPlot(
   let currentVar = variable;
 
   function render() {
-    const colors = resolveChainColors(options);
-    const chains = data.chainNames.map(c => data.getDraws(currentVar, c));
-    const minLen = Math.min(...chains.map(c => c.length));
-    const step = Math.max(1, Math.floor(minLen / 200));
-    const startAt = Math.max(20, step);
-
-    const iterations: number[] = [];
-    const rhatValues: number[] = [];
-
-    for (let n = startAt; n <= minLen; n += step) {
-      const sliced = chains.map(c => c.slice(0, n));
-      const means = sliced.map(c => computeMean(c));
-      const sds = sliced.map(c => computeStdev(c));
-      const counts = sliced.map(c => c.length);
-
-      const rhat = computeRhatFromParts(means, sds, counts);
-      if (rhat !== undefined && !isNaN(rhat)) {
-        iterations.push(n);
-        rhatValues.push(rhat);
-      }
-    }
+    const plotData = getRunningRhatData(data, currentVar, options);
+    const { iterations, rhat, color } = plotData;
 
     const traces = [{
       x: iterations,
-      y: rhatValues,
+      y: rhat,
       type: 'scatter' as const,
       mode: 'lines' as const,
       name: 'R\u0302',
-      line: { width: 2, color: colors[0] },
+      line: { width: 2, color },
     }];
 
     const layout = {

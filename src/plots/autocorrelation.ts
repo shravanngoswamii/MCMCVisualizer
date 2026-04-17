@@ -1,6 +1,41 @@
 import type { InferenceData } from '../types';
 import type { PlotOptions, PlotHandle } from './types';
-import { getPlotly, getLayout, getConfig, CHAIN_COLORS, resolveChainColors } from './types';
+import type { AutocorPlotData } from './data-types';
+import { getPlotly, getLayout, getConfig, resolveChainColors } from './types';
+
+const MAX_LAG = 50;
+
+function acf(draws: Float64Array, maxLag: number): number[] {
+  const n = draws.length;
+  let mean = 0;
+  for (let i = 0; i < n; i++) mean += draws[i]!;
+  mean /= n;
+  let variance = 0;
+  for (let i = 0; i < n; i++) variance += (draws[i]! - mean) ** 2;
+  if (variance === 0) return new Array(maxLag + 1).fill(0) as number[];
+  const result: number[] = [];
+  for (let lag = 0; lag <= maxLag; lag++) {
+    let sum = 0;
+    for (let i = 0; i < n - lag; i++) sum += (draws[i]! - mean) * (draws[i + lag]! - mean);
+    result.push(sum / variance);
+  }
+  return result;
+}
+
+export function getAutocorPlotData(
+  data: InferenceData,
+  variable: string,
+  opts?: PlotOptions,
+): AutocorPlotData {
+  const colors = resolveChainColors(opts);
+  const lags = Array.from({ length: MAX_LAG + 1 }, (_, i) => i);
+  const series = data.chainNames.map((chain, i) => {
+    const draws = data.getDraws(variable, chain);
+    const values = acf(draws, MAX_LAG);
+    return { chain, lags, values, color: colors[i % colors.length]! };
+  });
+  return { variable, maxLag: MAX_LAG, series };
+}
 
 export function autocorrelationPlot(
   container: HTMLElement,
@@ -10,40 +45,17 @@ export function autocorrelationPlot(
 ): PlotHandle {
   const Plotly = getPlotly();
   let currentVar = variable;
-  const MAX_LAG = 50;
-
-  function acf(draws: Float64Array, maxLag: number): number[] {
-    const n = draws.length;
-    let mean = 0;
-    for (let i = 0; i < n; i++) mean += draws[i]!;
-    mean /= n;
-    let variance = 0;
-    for (let i = 0; i < n; i++) variance += (draws[i]! - mean) ** 2;
-    if (variance === 0) return new Array(maxLag + 1).fill(0) as number[];
-    const result: number[] = [];
-    for (let lag = 0; lag <= maxLag; lag++) {
-      let sum = 0;
-      for (let i = 0; i < n - lag; i++) sum += (draws[i]! - mean) * (draws[i + lag]! - mean);
-      result.push(sum / variance);
-    }
-    return result;
-  }
 
   function render() {
-    const colors = resolveChainColors(options);
-    const lags = Array.from({ length: MAX_LAG + 1 }, (_, i) => i);
-    const traces = data.chainNames.map((chain, i) => {
-      const draws = data.getDraws(currentVar, chain);
-      const values = acf(draws, MAX_LAG);
-      return {
-        x: lags,
-        y: values,
-        type: 'bar' as const,
-        name: chain,
-        marker: { color: colors[i % colors.length] },
-        opacity: 0.7,
-      };
-    });
+    const plotData = getAutocorPlotData(data, currentVar, options);
+    const traces = plotData.series.map(s => ({
+      x: s.lags,
+      y: s.values,
+      type: 'bar' as const,
+      name: s.chain,
+      marker: { color: s.color },
+      opacity: 0.7,
+    }));
     const layout = {
       ...getLayout(options),
       title: { text: `Autocorrelation: ${currentVar}` },
