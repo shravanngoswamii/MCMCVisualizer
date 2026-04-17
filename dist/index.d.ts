@@ -54,55 +54,79 @@ interface InferenceData {
     sequenceStats(variable: string, chain: string): SequenceStats;
     variableStats(variable: string): VariableStats;
     summary(): VariableSummary[];
-    toTuringCSV(): string;
-    toMCMCChainsCSV(): string;
-    toStanCSV(): string;
-    toJSON(): string;
-    toMCMCChainsJSON(): string;
-    toWideCSV(): string;
     slice(start: number, end?: number): InferenceData;
     filterChains(chainNames: string[]): InferenceData;
     filterVariables(variableNames: string[]): InferenceData;
 }
-type FileFormat = 'turing-csv' | 'stan-csv' | 'mcmcchains-json' | 'unknown';
+type FileFormat = "turing-csv" | "stan-csv" | "mcmcchains-json" | "unknown";
 
+/**
+ * Custom theme for full visual control over Plotly output.
+ * Pass as `theme` in PlotOptions to override the built-in 'dark' or 'light' presets.
+ *
+ * Example — match the bayes app's dark design system:
+ * ```ts
+ * import { BAYES_THEME } from 'mcmc-visualizer/plots';
+ * plots.tracePlot(el, data, variable, { theme: BAYES_THEME });
+ * ```
+ */
+interface CustomTheme {
+    /** Plotly paper_bgcolor — outer background. Use 'transparent' to inherit from parent. */
+    paper_bgcolor?: string;
+    /** Plotly plot_bgcolor — inner chart area. */
+    plot_bgcolor?: string;
+    /** Axis/title font. */
+    font?: {
+        color?: string;
+        family?: string;
+        size?: number;
+    };
+    /** Grid line color. */
+    gridcolor?: string;
+    /** Zero-line color (defaults to gridcolor). */
+    zerolinecolor?: string;
+    /** Hover label colors. */
+    hoverlabel?: {
+        bgcolor?: string;
+        bordercolor?: string;
+        font?: {
+            color?: string;
+        };
+    };
+    /** Per-chain colors. Replaces the built-in palette for all plot types. */
+    chainColors?: string[];
+}
 interface PlotOptions {
     height?: number;
     width?: number;
-    theme?: 'dark' | 'light';
+    /** Built-in preset or a full CustomTheme object. Defaults to 'dark'. */
+    theme?: "dark" | "light" | CustomTheme;
 }
 interface PlotHandle {
     destroy(): void;
     update(variable?: string): void;
 }
-/**
- * Framework-agnostic Plotly specification.
- *
- * Returned by all `*Spec` functions — works without a DOM, in Node.js,
- * on the CLI, in React/Vue wrappers, and in AI tool responses.
- *
- * ```ts
- * // Browser
- * Plotly.newPlot(el, spec.data, spec.layout, spec.config);
- *
- * // React
- * <Plot data={spec.data} layout={spec.layout} config={spec.config} />
- *
- * // CLI / AI agent
- * console.log(JSON.stringify(spec));
- * ```
- */
 interface PlotSpec {
     readonly data: unknown[];
     readonly layout: Record<string, unknown>;
     readonly config: Record<string, unknown>;
 }
+/**
+ * Pre-built theme matching the bayes app dark design system.
+ * Uses the exact background colors, grid colors, and chain palette from the app.
+ *
+ * ```ts
+ * import { plots, BAYES_DARK_THEME } from 'mcmc-visualizer';
+ * plots.tracePlot(el, data, variable, { theme: BAYES_DARK_THEME });
+ * ```
+ */
+declare const BAYES_DARK_THEME: CustomTheme;
 
 /**
  * R-hat diagnostics — Vehtari et al. (2021) https://doi.org/10.1214/20-BA1221
  * Mirrors the reference implementation in MCMCDiagnosticTools.jl.
  */
-type RhatKind = 'rank' | 'bulk' | 'tail' | 'basic';
+type RhatKind = "rank" | "bulk" | "tail" | "basic";
 /**
  * Compute R-hat for an array of chains.
  * 'rank' (default) = max(bulk, tail) — strictest, recommended.
@@ -121,12 +145,6 @@ declare class MCMCData implements InferenceData {
     sequenceStats(variable: string, chain: string): SequenceStats;
     variableStats(variable: string): VariableStats;
     summary(): VariableSummary[];
-    toTuringCSV(): string;
-    toMCMCChainsCSV(): string;
-    toStanCSV(): string;
-    toWideCSV(): string;
-    toJSON(): string;
-    toMCMCChainsJSON(): string;
     slice(start: number, end?: number): InferenceData;
     filterChains(chainNames: string[]): InferenceData;
     filterVariables(variableNames: string[]): InferenceData;
@@ -204,23 +222,142 @@ declare function computeQuantiles(arr: Float64Array): {
 declare function computeHDI(arr: Float64Array, credMass?: number): [number, number];
 
 /**
- * Trace plot — sequential parameter values per chain over iterations.
- *
- * Two entry points:
- *   tracePlotSpec()  — returns a plain PlotSpec object. No DOM, no Plotly.
- *                      Works in Node.js, CLI, React/Vue wrappers, AI agents.
- *   tracePlot()      — renders directly to an HTMLElement (browser only).
+ * Serialize chain data to a plain JSON string for inspection or storage.
+ * Structure: { chainName: { variableName: number[] } }
  */
+declare function toJSON(data: InferenceData): string;
 
-/** Render a trace plot into an HTMLElement. Returns a handle for updates/cleanup. */
-declare function tracePlot(container: HTMLElement, data: InferenceData, variable: string, options?: PlotOptions): PlotHandle;
+/**
+ * Pure data structures returned by get*PlotData() functions.
+ * These have no dependency on any plotting library — pass them to Plotly,
+ * D3, Vega-Lite, ECharts, Canvas, or any other renderer.
+ */
+interface ChainSeries {
+    chain: string;
+    /** Iteration indices (x axis) */
+    iterations: number[];
+    /** Draw values (y axis) */
+    values: Float64Array;
+    color: string;
+}
+interface TracePlotData {
+    variable: string;
+    series: ChainSeries[];
+}
+interface DensityCurve {
+    chain: string;
+    /** Evaluation points */
+    x: number[];
+    /** KDE density values */
+    y: number[];
+    color: string;
+}
+interface DensityPlotData {
+    variable: string;
+    curves: DensityCurve[];
+}
+interface AutocorSeries {
+    chain: string;
+    lags: number[];
+    values: number[];
+    color: string;
+}
+interface AutocorPlotData {
+    variable: string;
+    maxLag: number;
+    series: AutocorSeries[];
+}
+interface HistogramSeries {
+    chain: string;
+    /** Raw draws — let the renderer decide bin count and scale */
+    draws: Float64Array;
+    color: string;
+}
+interface HistogramPlotData {
+    variable: string;
+    series: HistogramSeries[];
+}
+interface EcdfSeries {
+    chain: string;
+    /** Sorted draw values (x) */
+    x: number[];
+    /** Cumulative probabilities (y), same length as x */
+    y: number[];
+    color: string;
+}
+interface EcdfPlotData {
+    variable: string;
+    series: EcdfSeries[];
+}
+interface CumMeanSeries {
+    chain: string;
+    /** Running mean at each iteration */
+    values: number[];
+    color: string;
+}
+interface CumMeanPlotData {
+    variable: string;
+    iterations: number[];
+    series: CumMeanSeries[];
+}
+interface ForestRow {
+    variable: string;
+    mean: number;
+    hdiLow: number;
+    hdiHigh: number;
+    rhat: number;
+    essBulk: number;
+}
+interface ForestPlotData {
+    rows: ForestRow[];
+    color: string;
+}
+interface RankSeries {
+    chain: string;
+    /** Bin left edges */
+    bins: number[];
+    counts: number[];
+    color: string;
+}
+interface RankPlotData {
+    variable: string;
+    nBins: number;
+    series: RankSeries[];
+}
+interface RunningRhatData {
+    variable: string;
+    iterations: number[];
+    /** R-hat computed on draws 1..t for each t */
+    rhat: number[];
+    color: string;
+}
+interface DiagnosticsRow {
+    variable: string;
+    essBulk: number;
+    essTail: number;
+    rhat: number;
+}
+interface DiagnosticsHeatmapData {
+    rows: DiagnosticsRow[];
+}
 
+/** Compute trace plot data — no DOM, no Plotly. Pass to any renderer. */
+declare function getTracePlotData(data: InferenceData, variable: string, opts?: PlotOptions): TracePlotData;
+/** Plotly JSON spec — no DOM required. */
+declare function tracePlotSpec(data: InferenceData, variable: string, opts?: PlotOptions): PlotSpec;
+/** Render into an HTMLElement (Plotly adapter). */
+declare function tracePlot(container: HTMLElement, data: InferenceData, variable: string, opts?: PlotOptions): PlotHandle;
+
+declare function getHistogramPlotData(data: InferenceData, variable: string, opts?: PlotOptions): HistogramPlotData;
 declare function histogramPlot(container: HTMLElement, data: InferenceData, variable: string, options?: PlotOptions): PlotHandle;
 
+declare function getAutocorPlotData(data: InferenceData, variable: string, opts?: PlotOptions): AutocorPlotData;
 declare function autocorrelationPlot(container: HTMLElement, data: InferenceData, variable: string, options?: PlotOptions): PlotHandle;
 
+declare function getForestPlotData(data: InferenceData, opts?: PlotOptions): ForestPlotData;
 declare function forestPlot(container: HTMLElement, data: InferenceData, options?: PlotOptions): PlotHandle;
 
+declare function getCumMeanPlotData(data: InferenceData, variable: string, opts?: PlotOptions): CumMeanPlotData;
 declare function cumulativeMeanPlot(container: HTMLElement, data: InferenceData, variable: string, options?: PlotOptions): PlotHandle;
 
 declare function pairPlot(container: HTMLElement, data: InferenceData, variables?: string[], options?: PlotOptions): PlotHandle;
@@ -230,24 +367,48 @@ declare function summaryTable(container: HTMLElement, data: InferenceData, optio
     update(): void;
 };
 
+declare function getRankPlotData(data: InferenceData, variable: string, opts?: PlotOptions): RankPlotData;
 declare function rankPlot(container: HTMLElement, data: InferenceData, variable: string, options?: PlotOptions): PlotHandle;
 
+declare function getRunningRhatData(data: InferenceData, variable: string, opts?: PlotOptions): RunningRhatData;
 declare function runningRhatPlot(container: HTMLElement, data: InferenceData, variable: string, options?: PlotOptions): PlotHandle;
 
+declare function getDensityPlotData(data: InferenceData, variable: string, opts?: PlotOptions): DensityPlotData;
 declare function densityPlot(container: HTMLElement, data: InferenceData, variable: string, options?: PlotOptions): PlotHandle;
 
 declare function violinPlot(container: HTMLElement, data: InferenceData, options?: PlotOptions): PlotHandle;
 
 declare function energyPlot(container: HTMLElement, data: InferenceData, options?: PlotOptions): PlotHandle;
 
+declare function getEcdfPlotData(data: InferenceData, variable: string, opts?: PlotOptions): EcdfPlotData;
 declare function ecdfPlot(container: HTMLElement, data: InferenceData, variable: string, options?: PlotOptions): PlotHandle;
 
 declare function chainIntervalsPlot(container: HTMLElement, data: InferenceData, variable: string, options?: PlotOptions): PlotHandle;
 
+declare function getDiagnosticsHeatmapData(data: InferenceData): DiagnosticsHeatmapData;
 declare function diagnosticsHeatmapPlot(container: HTMLElement, data: InferenceData, options?: PlotOptions): PlotHandle;
 
+type index_AutocorPlotData = AutocorPlotData;
+type index_AutocorSeries = AutocorSeries;
+type index_ChainSeries = ChainSeries;
+type index_CumMeanPlotData = CumMeanPlotData;
+type index_CumMeanSeries = CumMeanSeries;
+type index_DensityCurve = DensityCurve;
+type index_DensityPlotData = DensityPlotData;
+type index_DiagnosticsHeatmapData = DiagnosticsHeatmapData;
+type index_DiagnosticsRow = DiagnosticsRow;
+type index_EcdfPlotData = EcdfPlotData;
+type index_EcdfSeries = EcdfSeries;
+type index_ForestPlotData = ForestPlotData;
+type index_ForestRow = ForestRow;
+type index_HistogramPlotData = HistogramPlotData;
+type index_HistogramSeries = HistogramSeries;
 type index_PlotHandle = PlotHandle;
 type index_PlotOptions = PlotOptions;
+type index_RankPlotData = RankPlotData;
+type index_RankSeries = RankSeries;
+type index_RunningRhatData = RunningRhatData;
+type index_TracePlotData = TracePlotData;
 declare const index_autocorrelationPlot: typeof autocorrelationPlot;
 declare const index_chainIntervalsPlot: typeof chainIntervalsPlot;
 declare const index_cumulativeMeanPlot: typeof cumulativeMeanPlot;
@@ -256,15 +417,26 @@ declare const index_diagnosticsHeatmapPlot: typeof diagnosticsHeatmapPlot;
 declare const index_ecdfPlot: typeof ecdfPlot;
 declare const index_energyPlot: typeof energyPlot;
 declare const index_forestPlot: typeof forestPlot;
+declare const index_getAutocorPlotData: typeof getAutocorPlotData;
+declare const index_getCumMeanPlotData: typeof getCumMeanPlotData;
+declare const index_getDensityPlotData: typeof getDensityPlotData;
+declare const index_getDiagnosticsHeatmapData: typeof getDiagnosticsHeatmapData;
+declare const index_getEcdfPlotData: typeof getEcdfPlotData;
+declare const index_getForestPlotData: typeof getForestPlotData;
+declare const index_getHistogramPlotData: typeof getHistogramPlotData;
+declare const index_getRankPlotData: typeof getRankPlotData;
+declare const index_getRunningRhatData: typeof getRunningRhatData;
+declare const index_getTracePlotData: typeof getTracePlotData;
 declare const index_histogramPlot: typeof histogramPlot;
 declare const index_pairPlot: typeof pairPlot;
 declare const index_rankPlot: typeof rankPlot;
 declare const index_runningRhatPlot: typeof runningRhatPlot;
 declare const index_summaryTable: typeof summaryTable;
 declare const index_tracePlot: typeof tracePlot;
+declare const index_tracePlotSpec: typeof tracePlotSpec;
 declare const index_violinPlot: typeof violinPlot;
 declare namespace index {
-  export { type index_PlotHandle as PlotHandle, type index_PlotOptions as PlotOptions, index_autocorrelationPlot as autocorrelationPlot, index_chainIntervalsPlot as chainIntervalsPlot, index_cumulativeMeanPlot as cumulativeMeanPlot, index_densityPlot as densityPlot, index_diagnosticsHeatmapPlot as diagnosticsHeatmapPlot, index_ecdfPlot as ecdfPlot, index_energyPlot as energyPlot, index_forestPlot as forestPlot, index_histogramPlot as histogramPlot, index_pairPlot as pairPlot, index_rankPlot as rankPlot, index_runningRhatPlot as runningRhatPlot, index_summaryTable as summaryTable, index_tracePlot as tracePlot, index_violinPlot as violinPlot };
+  export { type index_AutocorPlotData as AutocorPlotData, type index_AutocorSeries as AutocorSeries, type index_ChainSeries as ChainSeries, type index_CumMeanPlotData as CumMeanPlotData, type index_CumMeanSeries as CumMeanSeries, type index_DensityCurve as DensityCurve, type index_DensityPlotData as DensityPlotData, type index_DiagnosticsHeatmapData as DiagnosticsHeatmapData, type index_DiagnosticsRow as DiagnosticsRow, type index_EcdfPlotData as EcdfPlotData, type index_EcdfSeries as EcdfSeries, type index_ForestPlotData as ForestPlotData, type index_ForestRow as ForestRow, type index_HistogramPlotData as HistogramPlotData, type index_HistogramSeries as HistogramSeries, type index_PlotHandle as PlotHandle, type index_PlotOptions as PlotOptions, type index_RankPlotData as RankPlotData, type index_RankSeries as RankSeries, type index_RunningRhatData as RunningRhatData, type index_TracePlotData as TracePlotData, index_autocorrelationPlot as autocorrelationPlot, index_chainIntervalsPlot as chainIntervalsPlot, index_cumulativeMeanPlot as cumulativeMeanPlot, index_densityPlot as densityPlot, index_diagnosticsHeatmapPlot as diagnosticsHeatmapPlot, index_ecdfPlot as ecdfPlot, index_energyPlot as energyPlot, index_forestPlot as forestPlot, index_getAutocorPlotData as getAutocorPlotData, index_getCumMeanPlotData as getCumMeanPlotData, index_getDensityPlotData as getDensityPlotData, index_getDiagnosticsHeatmapData as getDiagnosticsHeatmapData, index_getEcdfPlotData as getEcdfPlotData, index_getForestPlotData as getForestPlotData, index_getHistogramPlotData as getHistogramPlotData, index_getRankPlotData as getRankPlotData, index_getRunningRhatData as getRunningRhatData, index_getTracePlotData as getTracePlotData, index_histogramPlot as histogramPlot, index_pairPlot as pairPlot, index_rankPlot as rankPlot, index_runningRhatPlot as runningRhatPlot, index_summaryTable as summaryTable, index_tracePlot as tracePlot, index_tracePlotSpec as tracePlotSpec, index_violinPlot as violinPlot };
 }
 
 /**
@@ -305,4 +477,4 @@ declare function fromAutoDetect(text: string): InferenceData;
  */
 declare function fromChainArrays(data: Record<string, Record<string, number[]>>): InferenceData;
 
-export { type ChainData, type FileFormat, type InferenceData, MCMCData, type PlotHandle, type PlotOptions, type PlotSpec, type RhatKind, type SequenceStats, type VariableStats, type VariableSummary, computeESS, computeEssBasic, computeEssBulk, computeEssTail, computeExcessKurtosis, computeGeweke, computeHDI, computeMCSE, computeMCSEMultiChain, computeMCSEQuantile, computeMCSEStd, computeMean, computeQuantiles, computeRhat, computeSkewness, computeSplitRhat, computeStdev, detectFormat, fromArviZJSON, fromAutoDetect, fromChainArrays, fromMCMCChainsJSON, fromStanCSV, fromStanCSVFiles, fromTuringCSV, parseArviZJSON, parseArviZJSONPosterior, index as plots };
+export { BAYES_DARK_THEME, type ChainData, type CustomTheme, type FileFormat, type InferenceData, MCMCData, type PlotHandle, type PlotOptions, type PlotSpec, type RhatKind, type SequenceStats, type VariableStats, type VariableSummary, computeESS, computeEssBasic, computeEssBulk, computeEssTail, computeExcessKurtosis, computeGeweke, computeHDI, computeMCSE, computeMCSEMultiChain, computeMCSEQuantile, computeMCSEStd, computeMean, computeQuantiles, computeRhat, computeSkewness, computeSplitRhat, computeStdev, detectFormat, fromArviZJSON, fromAutoDetect, fromChainArrays, fromMCMCChainsJSON, fromStanCSV, fromStanCSVFiles, fromTuringCSV, parseArviZJSON, parseArviZJSONPosterior, index as plots, toJSON };

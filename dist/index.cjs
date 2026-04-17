@@ -20,6 +20,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/index.ts
 var src_exports = {};
 __export(src_exports, {
+  BAYES_DARK_THEME: () => BAYES_DARK_THEME,
   MCMCData: () => MCMCData,
   computeESS: () => computeESS,
   computeEssBasic: () => computeEssBasic,
@@ -48,9 +49,156 @@ __export(src_exports, {
   fromTuringCSV: () => fromTuringCSV,
   parseArviZJSON: () => parseArviZJSON,
   parseArviZJSONPosterior: () => parseArviZJSONPosterior,
-  plots: () => plots_exports
+  plots: () => plots_exports,
+  toJSON: () => toJSON
 });
 module.exports = __toCommonJS(src_exports);
+
+// src/plots/types.ts
+var CHAIN_COLORS = [
+  "#636EFA",
+  "#EF553B",
+  "#00CC96",
+  "#AB63FA",
+  "#FFA15A",
+  "#19D3F3",
+  "#FF6692",
+  "#B6E880"
+];
+var FONT = "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+function resolveChainColors(opts) {
+  if (opts?.theme && typeof opts.theme === "object" && opts.theme.chainColors) {
+    return opts.theme.chainColors;
+  }
+  return CHAIN_COLORS;
+}
+function darkLayout(opts) {
+  return {
+    paper_bgcolor: "#181b26",
+    plot_bgcolor: "#13151e",
+    font: { color: "#eaedf3", family: FONT, size: 12 },
+    xaxis: {
+      gridcolor: "#262a3a",
+      zerolinecolor: "#3a3f52",
+      linecolor: "#2f3447"
+    },
+    yaxis: {
+      gridcolor: "#262a3a",
+      zerolinecolor: "#3a3f52",
+      linecolor: "#2f3447"
+    },
+    margin: { t: 40, r: 20, b: 50, l: 60 },
+    height: opts?.height,
+    width: opts?.width,
+    hoverlabel: {
+      bgcolor: "#1e2130",
+      bordercolor: "#3a3f52",
+      font: { color: "#eaedf3" }
+    }
+  };
+}
+function lightLayout(opts) {
+  return {
+    paper_bgcolor: "#ffffff",
+    plot_bgcolor: "#f8f9fa",
+    font: { color: "#1a1a1a", family: FONT, size: 12 },
+    xaxis: {
+      gridcolor: "#e5e7eb",
+      zerolinecolor: "#d1d5db",
+      linecolor: "#d1d5db"
+    },
+    yaxis: {
+      gridcolor: "#e5e7eb",
+      zerolinecolor: "#d1d5db",
+      linecolor: "#d1d5db"
+    },
+    margin: { t: 40, r: 20, b: 50, l: 60 },
+    height: opts?.height,
+    width: opts?.width
+  };
+}
+function customLayout(ct, opts) {
+  const base = darkLayout(opts);
+  const grid = ct.gridcolor ?? "#262a3a";
+  const zeroline = ct.zerolinecolor ?? grid;
+  return {
+    ...base,
+    ...ct.paper_bgcolor !== void 0 && { paper_bgcolor: ct.paper_bgcolor },
+    ...ct.plot_bgcolor !== void 0 && { plot_bgcolor: ct.plot_bgcolor },
+    ...ct.font !== void 0 && {
+      font: { ...base.font, ...ct.font }
+    },
+    ...ct.gridcolor !== void 0 && {
+      xaxis: {
+        ...base.xaxis,
+        gridcolor: grid,
+        zerolinecolor: zeroline
+      },
+      yaxis: {
+        ...base.yaxis,
+        gridcolor: grid,
+        zerolinecolor: zeroline
+      }
+    },
+    ...ct.hoverlabel !== void 0 && {
+      hoverlabel: { ...base.hoverlabel, ...ct.hoverlabel }
+    }
+  };
+}
+function getLayout(opts) {
+  if (!opts?.theme || opts.theme === "dark") return darkLayout(opts);
+  if (opts.theme === "light") return lightLayout(opts);
+  return customLayout(opts.theme, opts);
+}
+function getConfig() {
+  return {
+    responsive: true,
+    displaylogo: false,
+    toImageButtonOptions: { format: "png", height: 600, width: 1200, scale: 2 }
+  };
+}
+function getPlotly() {
+  const g = typeof globalThis !== "undefined" ? globalThis : void 0;
+  if (g?.["Plotly"]) return g["Plotly"];
+  try {
+    return require("plotly.js-dist-min");
+  } catch {
+  }
+  throw new Error(
+    'Plotly.js is not available.\nBrowser: <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>\nNode.js: npm install plotly.js-dist-min'
+  );
+}
+var BAYES_DARK_THEME = {
+  paper_bgcolor: "transparent",
+  plot_bgcolor: "transparent",
+  font: { color: "#FFFFFF", family: "Inter, system-ui, sans-serif", size: 12 },
+  gridcolor: "#7C7C7C",
+  zerolinecolor: "#9E9E9E",
+  hoverlabel: {
+    bgcolor: "#222224",
+    bordercolor: "#9E9E9E",
+    font: { color: "#FFFFFF" }
+  },
+  // chainColorForIndex palette from bayes app (distinctipy)
+  chainColors: [
+    "#1E6759",
+    "#2894b2",
+    "#ff8000",
+    "#0080ff",
+    "#80bf80",
+    "#470ba7",
+    "#c80b32",
+    "#fd7ee5",
+    "#027d30",
+    "#00ffff",
+    "#00ff80",
+    "#9c5a86",
+    "#808000",
+    "#8ed7fa",
+    "#80ff00",
+    "#6e52ff"
+  ]
+};
 
 // src/stats/fft.ts
 function transform(real, imag) {
@@ -228,11 +376,6 @@ function fromStanName(name) {
   }
   return name;
 }
-function toStanName(name) {
-  const m = name.match(/^(.+)\[(.+)\]$/);
-  if (!m) return name;
-  return `${m[1]}.${m[2].replace(/,/g, ".")}`;
-}
 
 // src/stats/math.ts
 function _norminvcdf(p) {
@@ -298,11 +441,16 @@ function _betainvcdf(p, a, b) {
 function _betaInitGuess(p, a, b) {
   const mean = a / (a + b);
   const v = a * b / ((a + b) ** 2 * (a + b + 1));
-  return Math.max(1e-6, Math.min(1 - 1e-6, mean + Math.sqrt(v) * _norminvcdf(p)));
+  return Math.max(
+    1e-6,
+    Math.min(1 - 1e-6, mean + Math.sqrt(v) * _norminvcdf(p))
+  );
 }
 function _betaPDF(x, a, b) {
   if (x <= 0 || x >= 1) return 0;
-  return Math.exp((a - 1) * Math.log(x) + (b - 1) * Math.log(1 - x) - _logBeta(a, b));
+  return Math.exp(
+    (a - 1) * Math.log(x) + (b - 1) * Math.log(1 - x) - _logBeta(a, b)
+  );
 }
 function _betainc(x, a, b) {
   return x < (a + 1) / (a + b + 2) ? _betaincCF(x, a, b) : 1 - _betaincCF(1 - x, b, a);
@@ -819,118 +967,6 @@ function computeSplitRhat(chains) {
   return Math.sqrt(varHat / W);
 }
 
-// src/exporters/index.ts
-function toTuringCSV(data) {
-  const lines = [];
-  for (const chainName of data.chainNames) {
-    const chain = data.chains.get(chainName);
-    for (const varName of data.variableNames) {
-      const draws = chain.draws.get(varName);
-      if (!draws) continue;
-      for (let i = 0; i < draws.length; i++) {
-        lines.push(`${chainName},${varName},${i},${draws[i]}`);
-      }
-    }
-  }
-  return lines.join("\n");
-}
-function toMCMCChainsCSV(data) {
-  const lines = [];
-  lines.push(["iteration", "chain", ...data.variableNames].join(","));
-  for (const chainName of data.chainNames) {
-    const chain = data.chains.get(chainName);
-    for (let i = 0; i < chain.drawCount; i++) {
-      const vals = [`${i + 1}`, chainName];
-      for (const v of data.variableNames) {
-        const draws = chain.draws.get(v);
-        vals.push(draws && i < draws.length ? `${draws[i]}` : "");
-      }
-      lines.push(vals.join(","));
-    }
-  }
-  return lines.join("\n");
-}
-function toStanCSV(data) {
-  const sections = [];
-  for (let ci = 0; ci < data.chainNames.length; ci++) {
-    const chainName = data.chainNames[ci];
-    const chain = data.chains.get(chainName);
-    const lines = [];
-    lines.push(`# Stan CSV export - ${chainName}`);
-    lines.push(`# model = mcmc-visualizer export`);
-    lines.push(`# method = sample`);
-    const stanNames = data.variableNames.map(toStanName);
-    const headerCols = ["lp__", "accept_stat__", ...stanNames];
-    lines.push(headerCols.join(","));
-    for (let i = 0; i < chain.drawCount; i++) {
-      const vals = ["0", "1"];
-      for (const v of data.variableNames) {
-        const draws = chain.draws.get(v);
-        vals.push(draws && i < draws.length ? `${draws[i]}` : "");
-      }
-      lines.push(vals.join(","));
-    }
-    sections.push(lines.join("\n"));
-  }
-  return sections.join("\n\n");
-}
-function toWideCSV(data) {
-  const lines = [];
-  lines.push(["chain_", "draw_", ...data.variableNames].join(","));
-  for (const chainName of data.chainNames) {
-    const chain = data.chains.get(chainName);
-    for (let i = 0; i < chain.drawCount; i++) {
-      const vals = [chainName, `${i + 1}`];
-      for (const v of data.variableNames) {
-        const draws = chain.draws.get(v);
-        vals.push(draws && i < draws.length ? `${draws[i]}` : "");
-      }
-      lines.push(vals.join(","));
-    }
-  }
-  return lines.join("\n");
-}
-function toJSON(data) {
-  const result = {};
-  for (const chainName of data.chainNames) {
-    const chain = data.chains.get(chainName);
-    const chainObj = {};
-    for (const varName of data.variableNames) {
-      const draws = chain.draws.get(varName);
-      chainObj[varName] = draws ? Array.from(draws) : [];
-    }
-    result[chainName] = chainObj;
-  }
-  return JSON.stringify(result, null, 2);
-}
-function toMCMCChainsJSON(data) {
-  const nIter = data.drawCount;
-  const nParams = data.variableNames.length;
-  const nChains = data.chainNames.length;
-  const flat = new Array(nIter * nParams * nChains);
-  for (let c = 0; c < nChains; c++) {
-    const chain = data.chains.get(data.chainNames[c]);
-    for (let p = 0; p < nParams; p++) {
-      const draws = chain.draws.get(data.variableNames[p]);
-      for (let i = 0; i < nIter; i++) {
-        const flatIdx = i + p * nIter + c * nIter * nParams;
-        flat[flatIdx] = draws && i < draws.length ? draws[i] : null;
-      }
-    }
-  }
-  const obj = {
-    size: [nIter, nParams, nChains],
-    value_flat: flat,
-    iterations: Array.from({ length: nIter }, (_, i) => i + 1),
-    parameters: data.variableNames,
-    chains: Array.from({ length: nChains }, (_, i) => i + 1),
-    logevidence: null,
-    name_map: { parameters: data.variableNames, internals: [] },
-    info: {}
-  };
-  return JSON.stringify(obj);
-}
-
 // src/inference-data.ts
 var MCMCData = class _MCMCData {
   constructor(chains) {
@@ -950,7 +986,8 @@ var MCMCData = class _MCMCData {
       const c = this.chains.get(chain);
       if (!c) throw new Error(`Chain "${chain}" not found`);
       const draws = c.draws.get(variable);
-      if (!draws) throw new Error(`Variable "${variable}" not found in chain "${chain}"`);
+      if (!draws)
+        throw new Error(`Variable "${variable}" not found in chain "${chain}"`);
       return draws;
     }
     return this.getAllDraws(variable);
@@ -1044,24 +1081,6 @@ var MCMCData = class _MCMCData {
       variable,
       ...this.variableStats(variable)
     }));
-  }
-  toTuringCSV() {
-    return toTuringCSV(this);
-  }
-  toMCMCChainsCSV() {
-    return toMCMCChainsCSV(this);
-  }
-  toStanCSV() {
-    return toStanCSV(this);
-  }
-  toWideCSV() {
-    return toWideCSV(this);
-  }
-  toJSON() {
-    return toJSON(this);
-  }
-  toMCMCChainsJSON() {
-    return toMCMCChainsJSON(this);
   }
   slice(start, end) {
     const newChains = /* @__PURE__ */ new Map();
@@ -1231,7 +1250,11 @@ function parseStanCSVFiles(files) {
       typedDraws.set(v, typed);
       maxLen = Math.max(maxLen, typed.length);
     }
-    chains.set(chainName, { name: chainName, draws: typedDraws, drawCount: maxLen });
+    chains.set(chainName, {
+      name: chainName,
+      draws: typedDraws,
+      drawCount: maxLen
+    });
   }
   return chains;
 }
@@ -1240,7 +1263,9 @@ function parseStanCSVFiles(files) {
 function parseMCMCChainsJSON(text) {
   const obj = JSON.parse(text);
   if (!obj.size || !obj.value_flat || !obj.parameters || !obj.chains) {
-    throw new Error("Invalid MCMCChains JSON: missing required fields (size, value_flat, parameters, chains)");
+    throw new Error(
+      "Invalid MCMCChains JSON: missing required fields (size, value_flat, parameters, chains)"
+    );
   }
   const [nIter, nParams, nChains] = obj.size;
   const flat = obj.value_flat;
@@ -1312,7 +1337,13 @@ function _groupToChains(dataVars) {
     const chainDim = variable.dims.indexOf("chain");
     const drawDim = variable.dims.indexOf("draw");
     if (chainDim === -1 || drawDim === -1) continue;
-    for (const { chainIdx, leafName, draws } of _flattenVariable(varName, variable.data, variable.dims, chainDim, drawDim)) {
+    for (const { chainIdx, leafName, draws } of _flattenVariable(
+      varName,
+      variable.data,
+      variable.dims,
+      chainDim,
+      drawDim
+    )) {
       let vars = chainMap.get(chainIdx);
       if (!vars) {
         vars = /* @__PURE__ */ new Map();
@@ -1343,7 +1374,11 @@ function _flattenVariable(varName, data, dims, chainDim, drawDim) {
     for (let ci = 0; ci < nChains; ci++) {
       const chainData = data[ci];
       if (!Array.isArray(chainData)) continue;
-      leaves.push({ chainIdx: ci, leafName: varName, draws: chainData.map(Number) });
+      leaves.push({
+        chainIdx: ci,
+        leafName: varName,
+        draws: chainData.map(Number)
+      });
     }
     return leaves;
   }
@@ -1383,7 +1418,8 @@ function _enumerateIndices(node, prefix = []) {
 // src/parsers/detect.ts
 function detectFormat(text) {
   const trimmed = text.trimStart();
-  if (trimmed.startsWith("{") && isMCMCChainsJSON(trimmed)) return "mcmcchains-json";
+  if (trimmed.startsWith("{") && isMCMCChainsJSON(trimmed))
+    return "mcmcchains-json";
   const lines = splitLines(text);
   if (lines.length === 0) return "unknown";
   if (isStanCSV(lines)) return "stan-csv";
@@ -1411,6 +1447,20 @@ function isTuringCSVLong(lines) {
   return !isNaN(drawIdx) && !isNaN(value) && Number.isInteger(drawIdx);
 }
 
+// src/exporters/index.ts
+function toJSON(data) {
+  const result = {};
+  for (const chainName of data.chainNames) {
+    result[chainName] = {};
+    for (const varName of data.variableNames) {
+      result[chainName][varName] = Array.from(
+        data.getDraws(varName, chainName)
+      );
+    }
+  }
+  return JSON.stringify(result);
+}
+
 // src/plots/index.ts
 var plots_exports = {};
 __export(plots_exports, {
@@ -1422,100 +1472,71 @@ __export(plots_exports, {
   ecdfPlot: () => ecdfPlot,
   energyPlot: () => energyPlot,
   forestPlot: () => forestPlot,
+  getAutocorPlotData: () => getAutocorPlotData,
+  getCumMeanPlotData: () => getCumMeanPlotData,
+  getDensityPlotData: () => getDensityPlotData,
+  getDiagnosticsHeatmapData: () => getDiagnosticsHeatmapData,
+  getEcdfPlotData: () => getEcdfPlotData,
+  getForestPlotData: () => getForestPlotData,
+  getHistogramPlotData: () => getHistogramPlotData,
+  getRankPlotData: () => getRankPlotData,
+  getRunningRhatData: () => getRunningRhatData,
+  getTracePlotData: () => getTracePlotData,
   histogramPlot: () => histogramPlot,
   pairPlot: () => pairPlot,
   rankPlot: () => rankPlot,
   runningRhatPlot: () => runningRhatPlot,
   summaryTable: () => summaryTable,
   tracePlot: () => tracePlot,
+  tracePlotSpec: () => tracePlotSpec,
   violinPlot: () => violinPlot
 });
 
-// src/plots/types.ts
-var CHAIN_COLORS = [
-  "#636EFA",
-  "#EF553B",
-  "#00CC96",
-  "#AB63FA",
-  "#FFA15A",
-  "#19D3F3",
-  "#FF6692",
-  "#B6E880"
-];
-var FONT = "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
-function darkLayout(opts) {
-  return {
-    paper_bgcolor: "#181b26",
-    plot_bgcolor: "#13151e",
-    font: { color: "#eaedf3", family: FONT, size: 12 },
-    xaxis: { gridcolor: "#262a3a", zerolinecolor: "#3a3f52", linecolor: "#2f3447" },
-    yaxis: { gridcolor: "#262a3a", zerolinecolor: "#3a3f52", linecolor: "#2f3447" },
-    margin: { t: 40, r: 20, b: 50, l: 60 },
-    height: opts?.height,
-    width: opts?.width,
-    hoverlabel: { bgcolor: "#1e2130", bordercolor: "#3a3f52", font: { color: "#eaedf3" } }
-  };
-}
-function lightLayout(opts) {
-  return {
-    paper_bgcolor: "#ffffff",
-    plot_bgcolor: "#f8f9fa",
-    font: { color: "#1a1a1a", family: FONT, size: 12 },
-    xaxis: { gridcolor: "#e5e7eb", zerolinecolor: "#d1d5db", linecolor: "#d1d5db" },
-    yaxis: { gridcolor: "#e5e7eb", zerolinecolor: "#d1d5db", linecolor: "#d1d5db" },
-    margin: { t: 40, r: 20, b: 50, l: 60 },
-    height: opts?.height,
-    width: opts?.width
-  };
-}
-function getLayout(opts) {
-  return opts?.theme === "light" ? lightLayout(opts) : darkLayout(opts);
-}
-function getConfig() {
-  return {
-    responsive: true,
-    displaylogo: false,
-    toImageButtonOptions: { format: "png", height: 600, width: 1200, scale: 2 }
-  };
-}
-function getPlotly() {
-  const g = typeof globalThis !== "undefined" ? globalThis : void 0;
-  if (g?.["Plotly"]) return g["Plotly"];
-  try {
-    return require("plotly.js-dist-min");
-  } catch {
-  }
-  throw new Error(
-    'Plotly.js is not available.\nBrowser: add <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>\nNode.js: npm install plotly.js-dist-min'
-  );
-}
-
 // src/plots/trace.ts
-function tracePlotSpec(data, variable, options) {
-  const traces = data.chainNames.map((chain, i) => ({
-    y: Array.from(data.getDraws(variable, chain)),
-    type: "scatter",
-    mode: "lines",
-    name: chain,
-    line: { width: 0.8, color: CHAIN_COLORS[i % CHAIN_COLORS.length] }
-  }));
-  const base = getLayout(options);
-  const layout = {
-    ...base,
-    title: { text: `Trace: ${variable}` },
-    xaxis: { ...base["xaxis"], title: { text: "Iteration" } },
-    yaxis: { ...base["yaxis"], title: { text: variable } },
-    legend: { orientation: "h", y: -0.15 }
+function getTracePlotData(data, variable, opts) {
+  const colors = resolveChainColors(opts);
+  return {
+    variable,
+    series: data.chainNames.map((chain, i) => ({
+      chain,
+      iterations: Array.from(
+        { length: data.getDraws(variable, chain).length },
+        (_, j) => j + 1
+      ),
+      values: data.getDraws(variable, chain),
+      color: colors[i % colors.length] ?? "#636EFA"
+    }))
   };
-  return { data: traces, layout, config: getConfig() };
 }
-function tracePlot(container, data, variable, options) {
+function tracePlotSpec(data, variable, opts) {
+  const { series } = getTracePlotData(data, variable, opts);
+  const base = getLayout(opts);
+  return {
+    data: series.map((s) => ({
+      x: s.iterations,
+      y: Array.from(s.values),
+      type: "scatter",
+      mode: "lines",
+      name: s.chain,
+      line: { width: 0.8, color: s.color }
+    })),
+    layout: {
+      ...base,
+      title: { text: `Trace: ${variable}` },
+      xaxis: { ...base["xaxis"], title: { text: "Iteration" } },
+      yaxis: { ...base["yaxis"], title: { text: variable } },
+      legend: { orientation: "h", y: -0.15 }
+    },
+    config: getConfig()
+  };
+}
+function tracePlot(container, data, variable, opts) {
   const Plotly = getPlotly();
   let currentVar = variable;
-  function render() {
-    const spec = tracePlotSpec(data, currentVar, options);
+  const render = () => {
+    const spec = tracePlotSpec(data, currentVar, opts);
     Plotly.react(container, spec.data, spec.layout, spec.config);
-  }
+  };
   render();
   return {
     destroy: () => Plotly.purge(container),
@@ -1527,16 +1548,26 @@ function tracePlot(container, data, variable, options) {
 }
 
 // src/plots/histogram.ts
+function getHistogramPlotData(data, variable, opts) {
+  const colors = resolveChainColors(opts);
+  const series = data.chainNames.map((chain, i) => ({
+    chain,
+    draws: data.getDraws(variable, chain),
+    color: colors[i % colors.length]
+  }));
+  return { variable, series };
+}
 function histogramPlot(container, data, variable, options) {
   const Plotly = getPlotly();
   let currentVar = variable;
   function render() {
-    const traces = data.chainNames.map((chain, i) => ({
-      x: Array.from(data.getDraws(currentVar, chain)),
+    const plotData = getHistogramPlotData(data, currentVar, options);
+    const traces = plotData.series.map((s) => ({
+      x: Array.from(s.draws),
       type: "histogram",
-      name: chain,
+      name: s.chain,
       opacity: 0.6,
-      marker: { color: CHAIN_COLORS[i % CHAIN_COLORS.length] }
+      marker: { color: s.color }
     }));
     const layout = {
       ...getLayout(options),
@@ -1558,54 +1589,67 @@ function histogramPlot(container, data, variable, options) {
 }
 
 // src/plots/autocorrelation.ts
+var MAX_LAG = 50;
+function acf(draws, maxLag) {
+  const n = draws.length;
+  let mean = 0;
+  for (let i = 0; i < n; i++) mean += draws[i];
+  mean /= n;
+  let variance = 0;
+  for (let i = 0; i < n; i++) variance += (draws[i] - mean) ** 2;
+  if (variance === 0) return new Array(maxLag + 1).fill(0);
+  const result = [];
+  for (let lag = 0; lag <= maxLag; lag++) {
+    let sum = 0;
+    for (let i = 0; i < n - lag; i++)
+      sum += (draws[i] - mean) * (draws[i + lag] - mean);
+    result.push(sum / variance);
+  }
+  return result;
+}
+function getAutocorPlotData(data, variable, opts) {
+  const colors = resolveChainColors(opts);
+  const lags = Array.from({ length: MAX_LAG + 1 }, (_, i) => i);
+  const series = data.chainNames.map((chain, i) => {
+    const draws = data.getDraws(variable, chain);
+    const values = acf(draws, MAX_LAG);
+    return { chain, lags, values, color: colors[i % colors.length] };
+  });
+  return { variable, maxLag: MAX_LAG, series };
+}
 function autocorrelationPlot(container, data, variable, options) {
   const Plotly = getPlotly();
   let currentVar = variable;
-  const MAX_LAG = 50;
-  function acf(draws, maxLag) {
-    const n = draws.length;
-    let mean = 0;
-    for (let i = 0; i < n; i++) mean += draws[i];
-    mean /= n;
-    let variance = 0;
-    for (let i = 0; i < n; i++) variance += (draws[i] - mean) ** 2;
-    if (variance === 0) return new Array(maxLag + 1).fill(0);
-    const result = [];
-    for (let lag = 0; lag <= maxLag; lag++) {
-      let sum = 0;
-      for (let i = 0; i < n - lag; i++) sum += (draws[i] - mean) * (draws[i + lag] - mean);
-      result.push(sum / variance);
-    }
-    return result;
-  }
   function render() {
-    const lags = Array.from({ length: MAX_LAG + 1 }, (_, i) => i);
-    const traces = data.chainNames.map((chain, i) => {
-      const draws = data.getDraws(currentVar, chain);
-      const values = acf(draws, MAX_LAG);
-      return {
-        x: lags,
-        y: values,
-        type: "bar",
-        name: chain,
-        marker: { color: CHAIN_COLORS[i % CHAIN_COLORS.length] },
-        opacity: 0.7
-      };
-    });
+    const plotData = getAutocorPlotData(data, currentVar, options);
+    const traces = plotData.series.map((s) => ({
+      x: s.lags,
+      y: s.values,
+      type: "bar",
+      name: s.chain,
+      marker: { color: s.color },
+      opacity: 0.7
+    }));
     const layout = {
       ...getLayout(options),
       title: { text: `Autocorrelation: ${currentVar}` },
       barmode: "group",
       xaxis: { ...getLayout(options).xaxis, title: "Lag" },
-      yaxis: { ...getLayout(options).yaxis, title: "ACF", range: [-0.2, 1.05] },
-      shapes: [{
-        type: "line",
-        x0: 0,
-        x1: MAX_LAG,
-        y0: 0,
-        y1: 0,
-        line: { color: "#888", width: 1, dash: "dash" }
-      }]
+      yaxis: {
+        ...getLayout(options).yaxis,
+        title: "ACF",
+        range: [-0.2, 1.05]
+      },
+      shapes: [
+        {
+          type: "line",
+          x0: 0,
+          x1: MAX_LAG,
+          y0: 0,
+          y1: 0,
+          line: { color: "#888", width: 1, dash: "dash" }
+        }
+      ]
     };
     Plotly.react(container, traces, layout, getConfig());
   }
@@ -1620,26 +1664,41 @@ function autocorrelationPlot(container, data, variable, options) {
 }
 
 // src/plots/forest.ts
+function getForestPlotData(data, opts) {
+  const colors = resolveChainColors(opts);
+  const summaries = data.summary();
+  const rows = summaries.map((s) => ({
+    variable: s.variable,
+    mean: s.mean,
+    hdiLow: s.hdi90[0],
+    hdiHigh: s.hdi90[1],
+    rhat: s.rhat ?? NaN,
+    essBulk: s.bulkEss
+  }));
+  return { rows, color: colors[0] };
+}
 function forestPlot(container, data, options) {
   const Plotly = getPlotly();
   function render() {
+    const plotData = getForestPlotData(data, options);
+    const { rows, color } = plotData;
+    const vars = rows.map((r) => r.variable);
+    const means = rows.map((r) => r.mean);
     const summaries = data.summary();
-    const vars = summaries.map((s) => s.variable);
-    const means = summaries.map((s) => s.mean);
     const hdiTrace = {
       x: means,
       y: vars,
       type: "scatter",
       mode: "markers",
-      marker: { size: 9, color: CHAIN_COLORS[0], symbol: "diamond" },
+      marker: { size: 9, color, symbol: "diamond" },
       error_x: {
         type: "data",
         symmetric: false,
-        array: summaries.map((s) => s.hdi90[1] - s.mean),
-        arrayminus: summaries.map((s) => s.mean - s.hdi90[0]),
+        array: rows.map((r) => r.hdiHigh - r.mean),
+        arrayminus: rows.map((r) => r.mean - r.hdiLow),
         thickness: 1.5,
         width: 0,
-        color: CHAIN_COLORS[0]
+        color
       },
       name: "90% HDI",
       showlegend: true
@@ -1657,7 +1716,7 @@ function forestPlot(container, data, options) {
         arrayminus: summaries.map((s) => s.mean - s.quantiles.q25),
         thickness: 5,
         width: 0,
-        color: CHAIN_COLORS[0]
+        color
       },
       name: "50% CI (IQR)",
       showlegend: true,
@@ -1667,17 +1726,23 @@ function forestPlot(container, data, options) {
       ...getLayout(options),
       title: { text: "Forest Plot" },
       height: Math.max(300, vars.length * 50 + 100),
-      xaxis: { ...getLayout(options).xaxis, title: "Value", zeroline: true },
+      xaxis: {
+        ...getLayout(options).xaxis,
+        title: "Value",
+        zeroline: true
+      },
       yaxis: { ...getLayout(options).yaxis, automargin: true },
-      shapes: [{
-        type: "line",
-        x0: 0,
-        x1: 0,
-        yref: "paper",
-        y0: 0,
-        y1: 1,
-        line: { color: "#888", width: 1, dash: "dash" }
-      }]
+      shapes: [
+        {
+          type: "line",
+          x0: 0,
+          x1: 0,
+          yref: "paper",
+          y0: 0,
+          y1: 1,
+          line: { color: "#888", width: 1, dash: "dash" }
+        }
+      ]
     };
     Plotly.react(container, [iqrTrace, hdiTrace], layout, getConfig());
   }
@@ -1689,31 +1754,44 @@ function forestPlot(container, data, options) {
 }
 
 // src/plots/cumulative-mean.ts
+function getCumMeanPlotData(data, variable, opts) {
+  const colors = resolveChainColors(opts);
+  const firstChain = data.chainNames[0];
+  const firstDraws = firstChain ? data.getDraws(variable, firstChain) : new Float64Array(0);
+  const n = firstDraws.length;
+  const iterations = Array.from({ length: n }, (_, i) => i + 1);
+  const series = data.chainNames.map((chain, i) => {
+    const draws = data.getDraws(variable, chain);
+    const values = [];
+    let sum = 0;
+    for (let j = 0; j < draws.length; j++) {
+      sum += draws[j];
+      values.push(sum / (j + 1));
+    }
+    return { chain, values, color: colors[i % colors.length] };
+  });
+  return { variable, iterations, series };
+}
 function cumulativeMeanPlot(container, data, variable, options) {
   const Plotly = getPlotly();
   let currentVar = variable;
   function render() {
-    const traces = data.chainNames.map((chain, i) => {
-      const draws = data.getDraws(currentVar, chain);
-      const cumMean = [];
-      let sum = 0;
-      for (let j = 0; j < draws.length; j++) {
-        sum += draws[j];
-        cumMean.push(sum / (j + 1));
-      }
-      return {
-        y: cumMean,
-        type: "scatter",
-        mode: "lines",
-        name: chain,
-        line: { width: 1.5, color: CHAIN_COLORS[i % CHAIN_COLORS.length] }
-      };
-    });
+    const plotData = getCumMeanPlotData(data, currentVar, options);
+    const traces = plotData.series.map((s) => ({
+      y: s.values,
+      type: "scatter",
+      mode: "lines",
+      name: s.chain,
+      line: { width: 1.5, color: s.color }
+    }));
     const layout = {
       ...getLayout(options),
       title: { text: `Cumulative Mean: ${currentVar}` },
       xaxis: { ...getLayout(options).xaxis, title: "Iteration" },
-      yaxis: { ...getLayout(options).yaxis, title: `Mean (${currentVar})` }
+      yaxis: {
+        ...getLayout(options).yaxis,
+        title: `Mean (${currentVar})`
+      }
     };
     Plotly.react(container, traces, layout, getConfig());
   }
@@ -1732,6 +1810,7 @@ function pairPlot(container, data, variables, options) {
   const Plotly = getPlotly();
   const vars = variables ?? data.variableNames.slice(0, 4);
   function render() {
+    const colors = resolveChainColors(options);
     const dimensions = vars.map((v) => ({
       label: v,
       values: Array.from(data.getAllDraws(v))
@@ -1748,20 +1827,21 @@ function pairPlot(container, data, variables, options) {
         marker: {
           size: 2,
           opacity: 0.3,
-          color: CHAIN_COLORS[i % CHAIN_COLORS.length]
+          color: colors[i % colors.length]
         },
         showupperhalf: false,
         diagonal: { visible: true }
       };
     });
-    const axisCfg = (theme) => {
-      const isDark = theme !== "light";
-      return { gridcolor: isDark ? "#252836" : "#e5e7eb", linecolor: isDark ? "#333" : "#d1d5db" };
-    };
+    const isDark = !options?.theme || options.theme !== "light";
+    const axisCfg = () => ({
+      gridcolor: isDark ? "#252836" : "#e5e7eb",
+      linecolor: isDark ? "#333" : "#d1d5db"
+    });
     const axisOverrides = {};
     for (let i = 1; i <= vars.length; i++) {
-      axisOverrides[`xaxis${i > 1 ? i : ""}`] = axisCfg(options?.theme);
-      axisOverrides[`yaxis${i > 1 ? i : ""}`] = axisCfg(options?.theme);
+      axisOverrides[`xaxis${i > 1 ? i : ""}`] = axisCfg();
+      axisOverrides[`yaxis${i > 1 ? i : ""}`] = axisCfg();
     }
     const layout = {
       ...getLayout(options),
@@ -1852,53 +1932,78 @@ function td(v, color) {
 }
 
 // src/plots/rank.ts
+function getRankPlotData(data, variable, opts) {
+  const colors = resolveChainColors(opts);
+  const nBins = 20;
+  const allDraws = [];
+  const chainDraws = [];
+  for (const chain of data.chainNames) {
+    const d = data.getDraws(variable, chain);
+    chainDraws.push(d);
+    for (let i = 0; i < d.length; i++) allDraws.push(d[i]);
+  }
+  const totalN = allDraws.length;
+  const sorted = [...allDraws].sort((a, b) => a - b);
+  const rankMap = /* @__PURE__ */ new Map();
+  for (let i = 0; i < sorted.length; i++) {
+    if (!rankMap.has(sorted[i])) rankMap.set(sorted[i], i + 1);
+  }
+  const binEdges = Array.from({ length: nBins }, (_, k) => k / nBins);
+  const series = data.chainNames.map((chain, ci) => {
+    const draws = chainDraws[ci];
+    const counts = new Array(nBins).fill(0);
+    for (let i = 0; i < draws.length; i++) {
+      const normRank = rankMap.get(draws[i]) / totalN;
+      const bin = Math.min(nBins - 1, Math.floor(normRank * nBins));
+      counts[bin]++;
+    }
+    return {
+      chain,
+      bins: binEdges,
+      counts,
+      color: colors[ci % colors.length]
+    };
+  });
+  return { variable, nBins, series };
+}
 function rankPlot(container, data, variable, options) {
   const Plotly = getPlotly();
   let currentVar = variable;
   function render() {
-    const allDraws = [];
-    const chainDraws = [];
-    for (const chain of data.chainNames) {
-      const d = data.getDraws(currentVar, chain);
-      chainDraws.push(d);
-      for (let i = 0; i < d.length; i++) allDraws.push(d[i]);
-    }
-    const sorted = [...allDraws].sort((a, b) => a - b);
-    const rankMap = /* @__PURE__ */ new Map();
-    for (let i = 0; i < sorted.length; i++) {
-      if (!rankMap.has(sorted[i])) rankMap.set(sorted[i], i + 1);
-    }
-    const nBins = 20;
-    const totalN = allDraws.length;
-    const traces = data.chainNames.map((chain, ci) => {
-      const draws = chainDraws[ci];
-      const ranks = [];
-      for (let i = 0; i < draws.length; i++) {
-        ranks.push(rankMap.get(draws[i]) / totalN);
-      }
-      return {
-        x: ranks,
-        type: "histogram",
-        name: chain,
-        nbinsx: nBins,
-        opacity: 0.6,
-        marker: { color: CHAIN_COLORS[ci % CHAIN_COLORS.length] }
-      };
-    });
+    const plotData = getRankPlotData(data, currentVar, options);
+    const { nBins, series } = plotData;
+    const totalN = series.reduce(
+      (sum, s) => sum + s.counts.reduce((a, b) => a + b, 0),
+      0
+    );
+    const nChains = series.length;
+    const traces = series.map((s) => ({
+      x: s.bins,
+      y: s.counts,
+      type: "bar",
+      name: s.chain,
+      opacity: 0.6,
+      marker: { color: s.color }
+    }));
     const layout = {
       ...getLayout(options),
       title: { text: `Rank Histogram: ${currentVar}` },
       barmode: "overlay",
-      xaxis: { ...getLayout(options).xaxis, title: "Normalized Rank" },
+      xaxis: {
+        ...getLayout(options).xaxis,
+        title: "Normalized Rank"
+      },
       yaxis: { ...getLayout(options).yaxis, title: "Count" },
-      shapes: [{
-        type: "line",
-        x0: 0,
-        x1: 1,
-        y0: totalN / data.chainNames.length / nBins,
-        y1: totalN / data.chainNames.length / nBins,
-        line: { color: "#888", width: 1.5, dash: "dash" }
-      }]
+      shapes: [
+        {
+          type: "line",
+          x0: 0,
+          x1: 1,
+          y0: totalN / nChains / nBins,
+          y1: totalN / nChains / nBins,
+          line: { color: "#888", width: 1.5, dash: "dash" }
+        }
+      ]
     };
     Plotly.react(container, traces, layout, getConfig());
   }
@@ -1913,55 +2018,66 @@ function rankPlot(container, data, variable, options) {
 }
 
 // src/plots/running-rhat.ts
+function getRunningRhatData(data, variable, opts) {
+  const colors = resolveChainColors(opts);
+  const chains = data.chainNames.map((c) => data.getDraws(variable, c));
+  const minLen = Math.min(...chains.map((c) => c.length));
+  const step = Math.max(1, Math.floor(minLen / 200));
+  const startAt = Math.max(20, step);
+  const iterations = [];
+  const rhat = [];
+  for (let n = startAt; n <= minLen; n += step) {
+    const sliced = chains.map((c) => c.slice(0, n));
+    const means = sliced.map((c) => computeMean(c));
+    const sds = sliced.map((c) => computeStdev(c));
+    const counts = sliced.map((c) => c.length);
+    const r = computeRhatFromParts(means, sds, counts);
+    if (r !== void 0 && !isNaN(r)) {
+      iterations.push(n);
+      rhat.push(r);
+    }
+  }
+  return { variable, iterations, rhat, color: colors[0] };
+}
 function runningRhatPlot(container, data, variable, options) {
   const Plotly = getPlotly();
   let currentVar = variable;
   function render() {
-    const chains = data.chainNames.map((c) => data.getDraws(currentVar, c));
-    const minLen = Math.min(...chains.map((c) => c.length));
-    const step = Math.max(1, Math.floor(minLen / 200));
-    const startAt = Math.max(20, step);
-    const iterations = [];
-    const rhatValues = [];
-    for (let n = startAt; n <= minLen; n += step) {
-      const sliced = chains.map((c) => c.slice(0, n));
-      const means = sliced.map((c) => computeMean(c));
-      const sds = sliced.map((c) => computeStdev(c));
-      const counts = sliced.map((c) => c.length);
-      const rhat = computeRhatFromParts(means, sds, counts);
-      if (rhat !== void 0 && !isNaN(rhat)) {
-        iterations.push(n);
-        rhatValues.push(rhat);
+    const plotData = getRunningRhatData(data, currentVar, options);
+    const { iterations, rhat, color } = plotData;
+    const traces = [
+      {
+        x: iterations,
+        y: rhat,
+        type: "scatter",
+        mode: "lines",
+        name: "R\u0302",
+        line: { width: 2, color }
       }
-    }
-    const traces = [{
-      x: iterations,
-      y: rhatValues,
-      type: "scatter",
-      mode: "lines",
-      name: "R\u0302",
-      line: { width: 2, color: CHAIN_COLORS[0] }
-    }];
+    ];
     const layout = {
       ...getLayout(options),
       title: { text: `Running R\u0302: ${currentVar}` },
       xaxis: { ...getLayout(options).xaxis, title: "Iteration" },
       yaxis: { ...getLayout(options).yaxis, title: "R\u0302" },
-      shapes: [{
-        type: "line",
-        x0: iterations[0] ?? 0,
-        x1: iterations[iterations.length - 1] ?? 1,
-        y0: 1,
-        y1: 1,
-        line: { color: "#22c55e", width: 1, dash: "dash" }
-      }, {
-        type: "line",
-        x0: iterations[0] ?? 0,
-        x1: iterations[iterations.length - 1] ?? 1,
-        y0: 1.05,
-        y1: 1.05,
-        line: { color: "#ef4444", width: 1, dash: "dot" }
-      }]
+      shapes: [
+        {
+          type: "line",
+          x0: iterations[0] ?? 0,
+          x1: iterations[iterations.length - 1] ?? 1,
+          y0: 1,
+          y1: 1,
+          line: { color: "#22c55e", width: 1, dash: "dash" }
+        },
+        {
+          type: "line",
+          x0: iterations[0] ?? 0,
+          x1: iterations[iterations.length - 1] ?? 1,
+          y0: 1.05,
+          y1: 1.05,
+          line: { color: "#ef4444", width: 1, dash: "dot" }
+        }
+      ]
     };
     Plotly.react(container, traces, layout, getConfig());
   }
@@ -1995,65 +2111,71 @@ function computeRhatFromParts(chainMeans, chainStdevs, chainCounts) {
 }
 
 // src/plots/density.ts
+function kde(values, nPoints = 200) {
+  const n = values.length;
+  if (n === 0) return { x: [], y: [] };
+  let min = values[0], max = values[0];
+  let mean = 0;
+  for (let i = 0; i < n; i++) {
+    if (values[i] < min) min = values[i];
+    if (values[i] > max) max = values[i];
+    mean += values[i];
+  }
+  mean /= n;
+  let variance = 0;
+  for (let i = 0; i < n; i++) variance += (values[i] - mean) ** 2;
+  variance /= n;
+  const sd = Math.sqrt(variance);
+  const sortedCopy2 = new Float64Array(values);
+  sortedCopy2.sort();
+  const q25 = sortedCopy2[Math.floor(n * 0.25)];
+  const q75 = sortedCopy2[Math.floor(n * 0.75)];
+  const iqr = q75 - q25;
+  const h = 0.9 * Math.min(sd, iqr / 1.34) * Math.pow(n, -0.2);
+  if (h <= 0 || isNaN(h)) return { x: [], y: [] };
+  const pad = 3 * h;
+  const xMin = min - pad;
+  const xMax = max + pad;
+  const step = (xMax - xMin) / (nPoints - 1);
+  const x = [];
+  const y = [];
+  for (let i = 0; i < nPoints; i++) {
+    const xi = xMin + i * step;
+    let density = 0;
+    for (let j = 0; j < n; j++) {
+      const u = (xi - values[j]) / h;
+      density += Math.exp(-0.5 * u * u);
+    }
+    density /= n * h * Math.sqrt(2 * Math.PI);
+    x.push(xi);
+    y.push(density);
+  }
+  return { x, y };
+}
+function getDensityPlotData(data, variable, opts) {
+  const colors = resolveChainColors(opts);
+  const curves = data.chainNames.map((chain, i) => {
+    const draws = data.getDraws(variable, chain);
+    const { x, y } = kde(draws);
+    return { chain, x, y, color: colors[i % colors.length] };
+  });
+  return { variable, curves };
+}
 function densityPlot(container, data, variable, options) {
   const Plotly = getPlotly();
   let currentVar = variable;
-  function kde(values, nPoints = 200) {
-    const n = values.length;
-    if (n === 0) return { x: [], y: [] };
-    let min = values[0], max = values[0];
-    let mean = 0;
-    for (let i = 0; i < n; i++) {
-      if (values[i] < min) min = values[i];
-      if (values[i] > max) max = values[i];
-      mean += values[i];
-    }
-    mean /= n;
-    let variance = 0;
-    for (let i = 0; i < n; i++) variance += (values[i] - mean) ** 2;
-    variance /= n;
-    const sd = Math.sqrt(variance);
-    const sortedCopy2 = new Float64Array(values);
-    sortedCopy2.sort();
-    const q25 = sortedCopy2[Math.floor(n * 0.25)];
-    const q75 = sortedCopy2[Math.floor(n * 0.75)];
-    const iqr = q75 - q25;
-    const h = 0.9 * Math.min(sd, iqr / 1.34) * Math.pow(n, -0.2);
-    if (h <= 0 || isNaN(h)) return { x: [], y: [] };
-    const pad = 3 * h;
-    const xMin = min - pad;
-    const xMax = max + pad;
-    const step = (xMax - xMin) / (nPoints - 1);
-    const x = [];
-    const y = [];
-    for (let i = 0; i < nPoints; i++) {
-      const xi = xMin + i * step;
-      let density = 0;
-      for (let j = 0; j < n; j++) {
-        const u = (xi - values[j]) / h;
-        density += Math.exp(-0.5 * u * u);
-      }
-      density /= n * h * Math.sqrt(2 * Math.PI);
-      x.push(xi);
-      y.push(density);
-    }
-    return { x, y };
-  }
   function render() {
-    const traces = data.chainNames.map((chain, i) => {
-      const draws = data.getDraws(currentVar, chain);
-      const { x, y } = kde(draws);
-      return {
-        x,
-        y,
-        type: "scatter",
-        mode: "lines",
-        name: chain,
-        fill: "tozeroy",
-        fillcolor: CHAIN_COLORS[i % CHAIN_COLORS.length].replace(")", ",0.12)").replace("rgb", "rgba"),
-        line: { width: 2, color: CHAIN_COLORS[i % CHAIN_COLORS.length] }
-      };
-    });
+    const plotData = getDensityPlotData(data, currentVar, options);
+    const traces = plotData.curves.map((curve) => ({
+      x: curve.x,
+      y: curve.y,
+      type: "scatter",
+      mode: "lines",
+      name: curve.chain,
+      fill: "tozeroy",
+      fillcolor: curve.color.replace(")", ",0.12)").replace("rgb", "rgba"),
+      line: { width: 2, color: curve.color }
+    }));
     const layout = {
       ...getLayout(options),
       title: { text: `Density: ${currentVar}` },
@@ -2076,6 +2198,7 @@ function densityPlot(container, data, variable, options) {
 function violinPlot(container, data, options) {
   const Plotly = getPlotly();
   function render() {
+    const colors = resolveChainColors(options);
     const traces = data.variableNames.map((varName, vi) => {
       const allDraws = Array.from(data.getAllDraws(varName));
       return {
@@ -2084,8 +2207,11 @@ function violinPlot(container, data, options) {
         name: varName,
         box: { visible: true },
         meanline: { visible: true },
-        line: { color: CHAIN_COLORS[vi % CHAIN_COLORS.length] },
-        fillcolor: CHAIN_COLORS[vi % CHAIN_COLORS.length].replace(")", ",0.3)").replace("rgb", "rgba"),
+        line: { color: colors[vi % colors.length] },
+        fillcolor: colors[vi % colors.length].replace(")", ",0.3)").replace(
+          "rgb",
+          "rgba"
+        ),
         opacity: 0.85,
         spanmode: "soft"
       };
@@ -2110,10 +2236,13 @@ function violinPlot(container, data, options) {
 function energyPlot(container, data, options) {
   const Plotly = getPlotly();
   function render() {
+    const colors = resolveChainColors(options);
     const hasEnergy = data.variableNames.some(
       (v) => v === "energy__" || v === "energy" || v === "lp__" || v === "log_density"
     );
-    const energyVar = ["energy__", "energy", "lp__", "log_density"].find((v) => data.variableNames.includes(v));
+    const energyVar = ["energy__", "energy", "lp__", "log_density"].find(
+      (v) => data.variableNames.includes(v)
+    );
     if (!energyVar) {
       container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:200px;color:#5c6278;font-size:0.85rem;font-family:Inter,system-ui,sans-serif">
         <div style="text-align:center">
@@ -2132,7 +2261,7 @@ function energyPlot(container, data, options) {
         type: "histogram",
         name: `${chain} (marginal)`,
         opacity: 0.5,
-        marker: { color: CHAIN_COLORS[i % CHAIN_COLORS.length] },
+        marker: { color: colors[i % colors.length] },
         histnorm: "probability density"
       });
       if (draws.length > 1) {
@@ -2146,8 +2275,8 @@ function energyPlot(container, data, options) {
           name: `${chain} (transition)`,
           opacity: 0.3,
           marker: {
-            color: CHAIN_COLORS[i % CHAIN_COLORS.length],
-            line: { color: CHAIN_COLORS[i % CHAIN_COLORS.length], width: 1 }
+            color: colors[i % colors.length],
+            line: { color: colors[i % colors.length], width: 1 }
           },
           histnorm: "probability density"
         });
@@ -2170,34 +2299,43 @@ function energyPlot(container, data, options) {
 }
 
 // src/plots/ecdf.ts
-function ecdfPlot(container, data, variable, options) {
-  const Plotly = getPlotly();
-  let currentVar = variable;
-  function computeECDF(draws) {
+function getEcdfPlotData(data, variable, opts) {
+  const colors = resolveChainColors(opts);
+  const series = data.chainNames.map((chain, i) => {
+    const draws = data.getDraws(variable, chain);
     const sorted = Array.from(draws).sort((a, b) => a - b);
     const n = sorted.length;
     return {
+      chain,
       x: sorted,
-      y: sorted.map((_, i) => (i + 1) / n)
+      y: sorted.map((_, idx) => (idx + 1) / n),
+      color: colors[i % colors.length]
     };
-  }
+  });
+  return { variable, series };
+}
+function ecdfPlot(container, data, variable, options) {
+  const Plotly = getPlotly();
+  let currentVar = variable;
   function render() {
-    const traces = data.chainNames.map((chain, i) => {
-      const { x, y } = computeECDF(data.getDraws(currentVar, chain));
-      return {
-        x,
-        y,
-        type: "scatter",
-        mode: "lines",
-        name: chain,
-        line: { width: 2, shape: "hv", color: CHAIN_COLORS[i % CHAIN_COLORS.length] }
-      };
-    });
+    const plotData = getEcdfPlotData(data, currentVar, options);
+    const traces = plotData.series.map((s) => ({
+      x: s.x,
+      y: s.y,
+      type: "scatter",
+      mode: "lines",
+      name: s.chain,
+      line: { width: 2, shape: "hv", color: s.color }
+    }));
     const layout = {
       ...getLayout(options),
       title: { text: `Empirical CDF: ${currentVar}` },
       xaxis: { ...getLayout(options).xaxis, title: currentVar },
-      yaxis: { ...getLayout(options).yaxis, title: "Cumulative Probability", range: [0, 1] }
+      yaxis: {
+        ...getLayout(options).yaxis,
+        title: "Cumulative Probability",
+        range: [0, 1]
+      }
     };
     Plotly.react(container, traces, layout, getConfig());
   }
@@ -2216,6 +2354,7 @@ function chainIntervalsPlot(container, data, variable, options) {
   const Plotly = getPlotly();
   let currentVar = variable;
   function render() {
+    const colors = resolveChainColors(options);
     const chainSummaries = data.chainNames.map((chain, index) => {
       const draws = data.getDraws(currentVar, chain);
       const mean = computeMean(draws);
@@ -2224,38 +2363,46 @@ function chainIntervalsPlot(container, data, variable, options) {
         chain,
         mean,
         hdi90,
-        color: CHAIN_COLORS[index % CHAIN_COLORS.length]
+        color: colors[index % colors.length]
       };
     });
     const overallStats = data.variableStats(currentVar);
-    const minX = Math.min(...chainSummaries.map((s) => s.hdi90[0]), overallStats.hdi90[0]);
-    const maxX = Math.max(...chainSummaries.map((s) => s.hdi90[1]), overallStats.hdi90[1]);
-    const traces = [{
-      x: chainSummaries.map((s) => s.mean),
-      y: chainSummaries.map((s) => s.chain),
-      type: "scatter",
-      mode: "markers",
-      name: "Chain mean",
-      marker: {
-        size: 11,
-        color: chainSummaries.map((s) => s.color),
-        line: { width: 1.5, color: "#ffffff" }
-      },
-      error_x: {
-        type: "data",
-        symmetric: false,
-        array: chainSummaries.map((s) => s.hdi90[1] - s.mean),
-        arrayminus: chainSummaries.map((s) => s.mean - s.hdi90[0]),
-        thickness: 2,
-        width: 0,
-        color: "#94a3b8"
-      },
-      customdata: chainSummaries.map((s) => [
-        s.hdi90[0].toFixed(3),
-        s.hdi90[1].toFixed(3)
-      ]),
-      hovertemplate: "%{y}<br>Mean=%{x:.3f}<br>90% HDI=[%{customdata[0]}, %{customdata[1]}]<extra></extra>"
-    }];
+    const minX = Math.min(
+      ...chainSummaries.map((s) => s.hdi90[0]),
+      overallStats.hdi90[0]
+    );
+    const maxX = Math.max(
+      ...chainSummaries.map((s) => s.hdi90[1]),
+      overallStats.hdi90[1]
+    );
+    const traces = [
+      {
+        x: chainSummaries.map((s) => s.mean),
+        y: chainSummaries.map((s) => s.chain),
+        type: "scatter",
+        mode: "markers",
+        name: "Chain mean",
+        marker: {
+          size: 11,
+          color: chainSummaries.map((s) => s.color),
+          line: { width: 1.5, color: "#ffffff" }
+        },
+        error_x: {
+          type: "data",
+          symmetric: false,
+          array: chainSummaries.map((s) => s.hdi90[1] - s.mean),
+          arrayminus: chainSummaries.map((s) => s.mean - s.hdi90[0]),
+          thickness: 2,
+          width: 0,
+          color: "#94a3b8"
+        },
+        customdata: chainSummaries.map((s) => [
+          s.hdi90[0].toFixed(3),
+          s.hdi90[1].toFixed(3)
+        ]),
+        hovertemplate: "%{y}<br>Mean=%{x:.3f}<br>90% HDI=[%{customdata[0]}, %{customdata[1]}]<extra></extra>"
+      }
+    ];
     const layout = {
       ...getLayout(options),
       title: { text: `Chain Intervals: ${currentVar}` },
@@ -2287,14 +2434,19 @@ function chainIntervalsPlot(container, data, variable, options) {
           line: { color: "#f59e0b", width: 2, dash: "dash" }
         }
       ],
-      annotations: [{
-        x: overallStats.mean,
-        y: 1.02,
-        yref: "paper",
-        text: `Overall mean ${overallStats.mean.toFixed(3)}`,
-        showarrow: false,
-        font: { size: 11, color: options?.theme === "light" ? "#92400e" : "#fbbf24" }
-      }]
+      annotations: [
+        {
+          x: overallStats.mean,
+          y: 1.02,
+          yref: "paper",
+          text: `Overall mean ${overallStats.mean.toFixed(3)}`,
+          showarrow: false,
+          font: {
+            size: 11,
+            color: options?.theme === "light" ? "#92400e" : "#fbbf24"
+          }
+        }
+      ]
     };
     Plotly.react(container, traces, layout, getConfig());
   }
@@ -2309,6 +2461,16 @@ function chainIntervalsPlot(container, data, variable, options) {
 }
 
 // src/plots/diagnostics-heatmap.ts
+function getDiagnosticsHeatmapData(data) {
+  const summaries = data.summary();
+  const rows = summaries.map((s) => ({
+    variable: s.variable,
+    essBulk: s.bulkEss,
+    essTail: s.tailEss,
+    rhat: s.rhat ?? NaN
+  }));
+  return { rows };
+}
 function diagnosticsHeatmapPlot(container, data, options) {
   const Plotly = getPlotly();
   function render() {
@@ -2348,7 +2510,11 @@ function diagnosticsHeatmapPlot(container, data, options) {
         label: "MCSE / sd",
         raw: (summary) => summary.stdev === 0 ? NaN : summary.mcse / summary.stdev,
         text: (summary) => summary.stdev === 0 ? "0.000" : formatValue(summary.mcse / summary.stdev),
-        score: (summary) => scoreUpper(summary.stdev === 0 ? 0 : summary.mcse / summary.stdev, 0.02, 0.1)
+        score: (summary) => scoreUpper(
+          summary.stdev === 0 ? 0 : summary.mcse / summary.stdev,
+          0.02,
+          0.1
+        )
       },
       {
         label: "|Geweke z|",
@@ -2359,14 +2525,24 @@ function diagnosticsHeatmapPlot(container, data, options) {
     ];
     const x = metrics.map((metric) => metric.label);
     const y = summaries.map((summary) => summary.variable);
-    const z = summaries.map((summary) => metrics.map((metric) => metric.score(summary)));
-    const text = summaries.map((summary) => metrics.map((metric) => metric.text(summary)));
-    const customdata = summaries.map((summary) => metrics.map((metric) => metric.raw(summary)));
+    const z = summaries.map(
+      (summary) => metrics.map((metric) => metric.score(summary))
+    );
+    const text = summaries.map(
+      (summary) => metrics.map((metric) => metric.text(summary))
+    );
+    const customdata = summaries.map(
+      (summary) => metrics.map((metric) => metric.raw(summary))
+    );
     const layout = {
       ...getLayout(options),
       title: { text: "Diagnostics Heatmap" },
       xaxis: { ...getLayout(options).xaxis, side: "top" },
-      yaxis: { ...getLayout(options).yaxis, automargin: true, autorange: "reversed" },
+      yaxis: {
+        ...getLayout(options).yaxis,
+        automargin: true,
+        autorange: "reversed"
+      },
       margin: { t: 70, r: 40, b: 40, l: 100 }
     };
     const trace = {
