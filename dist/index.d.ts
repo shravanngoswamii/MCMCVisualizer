@@ -64,10 +64,9 @@ type FileFormat = "turing-csv" | "stan-csv" | "mcmcchains-json" | "unknown";
  * Custom theme for full visual control over Plotly output.
  * Pass as `theme` in PlotOptions to override the built-in 'dark' or 'light' presets.
  *
- * Example — match the bayes app's dark design system:
  * ```ts
- * import { BAYES_THEME } from 'mcmc-visualizer/plots';
- * plots.tracePlot(el, data, variable, { theme: BAYES_THEME });
+ * const myTheme: CustomTheme = { paper_bgcolor: 'transparent', font: { color: '#eee' } };
+ * plots.tracePlot(el, data, variable, { theme: myTheme });
  * ```
  */
 interface CustomTheme {
@@ -111,16 +110,6 @@ interface PlotSpec {
     readonly layout: Record<string, unknown>;
     readonly config: Record<string, unknown>;
 }
-/**
- * Pre-built theme matching the bayes app dark design system.
- * Uses the exact background colors, grid colors, and chain palette from the app.
- *
- * ```ts
- * import { plots, BAYES_DARK_THEME } from 'mcmc-visualizer';
- * plots.tracePlot(el, data, variable, { theme: BAYES_DARK_THEME });
- * ```
- */
-declare const BAYES_DARK_THEME: CustomTheme;
 
 /**
  * R-hat diagnostics — Vehtari et al. (2021) https://doi.org/10.1214/20-BA1221
@@ -362,6 +351,13 @@ declare function cumulativeMeanPlot(container: HTMLElement, data: InferenceData,
 
 declare function pairPlot(container: HTMLElement, data: InferenceData, variables?: string[], options?: PlotOptions): PlotHandle;
 
+interface ScatterPlotOptions extends PlotOptions {
+    markerSize?: number;
+    markerOpacity?: number;
+}
+declare function scatterPlot(container: HTMLElement, data: InferenceData, variableX: string, variableY: string, options?: ScatterPlotOptions): PlotHandle;
+declare function scatter3dPlot(container: HTMLElement, data: InferenceData, variableX: string, variableY: string, variableZ: string, options?: ScatterPlotOptions): PlotHandle;
+
 declare function summaryTable(container: HTMLElement, data: InferenceData, options?: PlotOptions): {
     destroy(): void;
     update(): void;
@@ -408,6 +404,7 @@ type index_PlotOptions = PlotOptions;
 type index_RankPlotData = RankPlotData;
 type index_RankSeries = RankSeries;
 type index_RunningRhatData = RunningRhatData;
+type index_ScatterPlotOptions = ScatterPlotOptions;
 type index_TracePlotData = TracePlotData;
 declare const index_autocorrelationPlot: typeof autocorrelationPlot;
 declare const index_chainIntervalsPlot: typeof chainIntervalsPlot;
@@ -431,12 +428,14 @@ declare const index_histogramPlot: typeof histogramPlot;
 declare const index_pairPlot: typeof pairPlot;
 declare const index_rankPlot: typeof rankPlot;
 declare const index_runningRhatPlot: typeof runningRhatPlot;
+declare const index_scatter3dPlot: typeof scatter3dPlot;
+declare const index_scatterPlot: typeof scatterPlot;
 declare const index_summaryTable: typeof summaryTable;
 declare const index_tracePlot: typeof tracePlot;
 declare const index_tracePlotSpec: typeof tracePlotSpec;
 declare const index_violinPlot: typeof violinPlot;
 declare namespace index {
-  export { type index_AutocorPlotData as AutocorPlotData, type index_AutocorSeries as AutocorSeries, type index_ChainSeries as ChainSeries, type index_CumMeanPlotData as CumMeanPlotData, type index_CumMeanSeries as CumMeanSeries, type index_DensityCurve as DensityCurve, type index_DensityPlotData as DensityPlotData, type index_DiagnosticsHeatmapData as DiagnosticsHeatmapData, type index_DiagnosticsRow as DiagnosticsRow, type index_EcdfPlotData as EcdfPlotData, type index_EcdfSeries as EcdfSeries, type index_ForestPlotData as ForestPlotData, type index_ForestRow as ForestRow, type index_HistogramPlotData as HistogramPlotData, type index_HistogramSeries as HistogramSeries, type index_PlotHandle as PlotHandle, type index_PlotOptions as PlotOptions, type index_RankPlotData as RankPlotData, type index_RankSeries as RankSeries, type index_RunningRhatData as RunningRhatData, type index_TracePlotData as TracePlotData, index_autocorrelationPlot as autocorrelationPlot, index_chainIntervalsPlot as chainIntervalsPlot, index_cumulativeMeanPlot as cumulativeMeanPlot, index_densityPlot as densityPlot, index_diagnosticsHeatmapPlot as diagnosticsHeatmapPlot, index_ecdfPlot as ecdfPlot, index_energyPlot as energyPlot, index_forestPlot as forestPlot, index_getAutocorPlotData as getAutocorPlotData, index_getCumMeanPlotData as getCumMeanPlotData, index_getDensityPlotData as getDensityPlotData, index_getDiagnosticsHeatmapData as getDiagnosticsHeatmapData, index_getEcdfPlotData as getEcdfPlotData, index_getForestPlotData as getForestPlotData, index_getHistogramPlotData as getHistogramPlotData, index_getRankPlotData as getRankPlotData, index_getRunningRhatData as getRunningRhatData, index_getTracePlotData as getTracePlotData, index_histogramPlot as histogramPlot, index_pairPlot as pairPlot, index_rankPlot as rankPlot, index_runningRhatPlot as runningRhatPlot, index_summaryTable as summaryTable, index_tracePlot as tracePlot, index_tracePlotSpec as tracePlotSpec, index_violinPlot as violinPlot };
+  export { type index_AutocorPlotData as AutocorPlotData, type index_AutocorSeries as AutocorSeries, type index_ChainSeries as ChainSeries, type index_CumMeanPlotData as CumMeanPlotData, type index_CumMeanSeries as CumMeanSeries, type index_DensityCurve as DensityCurve, type index_DensityPlotData as DensityPlotData, type index_DiagnosticsHeatmapData as DiagnosticsHeatmapData, type index_DiagnosticsRow as DiagnosticsRow, type index_EcdfPlotData as EcdfPlotData, type index_EcdfSeries as EcdfSeries, type index_ForestPlotData as ForestPlotData, type index_ForestRow as ForestRow, type index_HistogramPlotData as HistogramPlotData, type index_HistogramSeries as HistogramSeries, type index_PlotHandle as PlotHandle, type index_PlotOptions as PlotOptions, type index_RankPlotData as RankPlotData, type index_RankSeries as RankSeries, type index_RunningRhatData as RunningRhatData, type index_ScatterPlotOptions as ScatterPlotOptions, type index_TracePlotData as TracePlotData, index_autocorrelationPlot as autocorrelationPlot, index_chainIntervalsPlot as chainIntervalsPlot, index_cumulativeMeanPlot as cumulativeMeanPlot, index_densityPlot as densityPlot, index_diagnosticsHeatmapPlot as diagnosticsHeatmapPlot, index_ecdfPlot as ecdfPlot, index_energyPlot as energyPlot, index_forestPlot as forestPlot, index_getAutocorPlotData as getAutocorPlotData, index_getCumMeanPlotData as getCumMeanPlotData, index_getDensityPlotData as getDensityPlotData, index_getDiagnosticsHeatmapData as getDiagnosticsHeatmapData, index_getEcdfPlotData as getEcdfPlotData, index_getForestPlotData as getForestPlotData, index_getHistogramPlotData as getHistogramPlotData, index_getRankPlotData as getRankPlotData, index_getRunningRhatData as getRunningRhatData, index_getTracePlotData as getTracePlotData, index_histogramPlot as histogramPlot, index_pairPlot as pairPlot, index_rankPlot as rankPlot, index_runningRhatPlot as runningRhatPlot, index_scatter3dPlot as scatter3dPlot, index_scatterPlot as scatterPlot, index_summaryTable as summaryTable, index_tracePlot as tracePlot, index_tracePlotSpec as tracePlotSpec, index_violinPlot as violinPlot };
 }
 
 /**
@@ -477,4 +476,4 @@ declare function fromAutoDetect(text: string): InferenceData;
  */
 declare function fromChainArrays(data: Record<string, Record<string, number[]>>): InferenceData;
 
-export { BAYES_DARK_THEME, type ChainData, type CustomTheme, type FileFormat, type InferenceData, MCMCData, type PlotHandle, type PlotOptions, type PlotSpec, type RhatKind, type SequenceStats, type VariableStats, type VariableSummary, computeESS, computeEssBasic, computeEssBulk, computeEssTail, computeExcessKurtosis, computeGeweke, computeHDI, computeMCSE, computeMCSEMultiChain, computeMCSEQuantile, computeMCSEStd, computeMean, computeQuantiles, computeRhat, computeSkewness, computeSplitRhat, computeStdev, detectFormat, fromArviZJSON, fromAutoDetect, fromChainArrays, fromMCMCChainsJSON, fromStanCSV, fromStanCSVFiles, fromTuringCSV, parseArviZJSON, parseArviZJSONPosterior, index as plots, toJSON };
+export { type ChainData, type CustomTheme, type FileFormat, type InferenceData, MCMCData, type PlotHandle, type PlotOptions, type PlotSpec, type RhatKind, type SequenceStats, type VariableStats, type VariableSummary, computeESS, computeEssBasic, computeEssBulk, computeEssTail, computeExcessKurtosis, computeGeweke, computeHDI, computeMCSE, computeMCSEMultiChain, computeMCSEQuantile, computeMCSEStd, computeMean, computeQuantiles, computeRhat, computeSkewness, computeSplitRhat, computeStdev, detectFormat, fromArviZJSON, fromAutoDetect, fromChainArrays, fromMCMCChainsJSON, fromStanCSV, fromStanCSVFiles, fromTuringCSV, parseArviZJSON, parseArviZJSONPosterior, index as plots, toJSON };

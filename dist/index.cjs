@@ -20,7 +20,6 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/index.ts
 var src_exports = {};
 __export(src_exports, {
-  BAYES_DARK_THEME: () => BAYES_DARK_THEME,
   MCMCData: () => MCMCData,
   computeESS: () => computeESS,
   computeEssBasic: () => computeEssBasic,
@@ -53,152 +52,6 @@ __export(src_exports, {
   toJSON: () => toJSON
 });
 module.exports = __toCommonJS(src_exports);
-
-// src/plots/types.ts
-var CHAIN_COLORS = [
-  "#636EFA",
-  "#EF553B",
-  "#00CC96",
-  "#AB63FA",
-  "#FFA15A",
-  "#19D3F3",
-  "#FF6692",
-  "#B6E880"
-];
-var FONT = "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
-function resolveChainColors(opts) {
-  if (opts?.theme && typeof opts.theme === "object" && opts.theme.chainColors) {
-    return opts.theme.chainColors;
-  }
-  return CHAIN_COLORS;
-}
-function darkLayout(opts) {
-  return {
-    paper_bgcolor: "#181b26",
-    plot_bgcolor: "#13151e",
-    font: { color: "#eaedf3", family: FONT, size: 12 },
-    xaxis: {
-      gridcolor: "#262a3a",
-      zerolinecolor: "#3a3f52",
-      linecolor: "#2f3447"
-    },
-    yaxis: {
-      gridcolor: "#262a3a",
-      zerolinecolor: "#3a3f52",
-      linecolor: "#2f3447"
-    },
-    margin: { t: 40, r: 20, b: 50, l: 60 },
-    height: opts?.height,
-    width: opts?.width,
-    hoverlabel: {
-      bgcolor: "#1e2130",
-      bordercolor: "#3a3f52",
-      font: { color: "#eaedf3" }
-    }
-  };
-}
-function lightLayout(opts) {
-  return {
-    paper_bgcolor: "#ffffff",
-    plot_bgcolor: "#f8f9fa",
-    font: { color: "#1a1a1a", family: FONT, size: 12 },
-    xaxis: {
-      gridcolor: "#e5e7eb",
-      zerolinecolor: "#d1d5db",
-      linecolor: "#d1d5db"
-    },
-    yaxis: {
-      gridcolor: "#e5e7eb",
-      zerolinecolor: "#d1d5db",
-      linecolor: "#d1d5db"
-    },
-    margin: { t: 40, r: 20, b: 50, l: 60 },
-    height: opts?.height,
-    width: opts?.width
-  };
-}
-function customLayout(ct, opts) {
-  const base = darkLayout(opts);
-  const grid = ct.gridcolor ?? "#262a3a";
-  const zeroline = ct.zerolinecolor ?? grid;
-  return {
-    ...base,
-    ...ct.paper_bgcolor !== void 0 && { paper_bgcolor: ct.paper_bgcolor },
-    ...ct.plot_bgcolor !== void 0 && { plot_bgcolor: ct.plot_bgcolor },
-    ...ct.font !== void 0 && {
-      font: { ...base.font, ...ct.font }
-    },
-    ...ct.gridcolor !== void 0 && {
-      xaxis: {
-        ...base.xaxis,
-        gridcolor: grid,
-        zerolinecolor: zeroline
-      },
-      yaxis: {
-        ...base.yaxis,
-        gridcolor: grid,
-        zerolinecolor: zeroline
-      }
-    },
-    ...ct.hoverlabel !== void 0 && {
-      hoverlabel: { ...base.hoverlabel, ...ct.hoverlabel }
-    }
-  };
-}
-function getLayout(opts) {
-  if (!opts?.theme || opts.theme === "dark") return darkLayout(opts);
-  if (opts.theme === "light") return lightLayout(opts);
-  return customLayout(opts.theme, opts);
-}
-function getConfig() {
-  return {
-    responsive: true,
-    displaylogo: false,
-    toImageButtonOptions: { format: "png", height: 600, width: 1200, scale: 2 }
-  };
-}
-function getPlotly() {
-  const g = typeof globalThis !== "undefined" ? globalThis : void 0;
-  if (g?.["Plotly"]) return g["Plotly"];
-  try {
-    return require("plotly.js-dist-min");
-  } catch {
-  }
-  throw new Error(
-    'Plotly.js is not available.\nBrowser: <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>\nNode.js: npm install plotly.js-dist-min'
-  );
-}
-var BAYES_DARK_THEME = {
-  paper_bgcolor: "transparent",
-  plot_bgcolor: "transparent",
-  font: { color: "#FFFFFF", family: "Inter, system-ui, sans-serif", size: 12 },
-  gridcolor: "#7C7C7C",
-  zerolinecolor: "#9E9E9E",
-  hoverlabel: {
-    bgcolor: "#222224",
-    bordercolor: "#9E9E9E",
-    font: { color: "#FFFFFF" }
-  },
-  // chainColorForIndex palette from bayes app (distinctipy)
-  chainColors: [
-    "#1E6759",
-    "#2894b2",
-    "#ff8000",
-    "#0080ff",
-    "#80bf80",
-    "#470ba7",
-    "#c80b32",
-    "#fd7ee5",
-    "#027d30",
-    "#00ffff",
-    "#00ff80",
-    "#9c5a86",
-    "#808000",
-    "#8ed7fa",
-    "#80ff00",
-    "#6e52ff"
-  ]
-};
 
 // src/stats/fft.ts
 function transform(real, imag) {
@@ -1486,11 +1339,181 @@ __export(plots_exports, {
   pairPlot: () => pairPlot,
   rankPlot: () => rankPlot,
   runningRhatPlot: () => runningRhatPlot,
+  scatter3dPlot: () => scatter3dPlot,
+  scatterPlot: () => scatterPlot,
   summaryTable: () => summaryTable,
   tracePlot: () => tracePlot,
   tracePlotSpec: () => tracePlotSpec,
   violinPlot: () => violinPlot
 });
+
+// src/plots/types.ts
+var CHAIN_COLORS = [
+  "#636EFA",
+  "#EF553B",
+  "#00CC96",
+  "#AB63FA",
+  "#FFA15A",
+  "#19D3F3",
+  "#FF6692",
+  "#B6E880"
+];
+var FONT = "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+function hexToRgba(hex, alpha) {
+  const h = hex.replace("#", "");
+  let r, g, b;
+  if (h.length === 3) {
+    r = parseInt(h[0] + h[0], 16);
+    g = parseInt(h[1] + h[1], 16);
+    b = parseInt(h[2] + h[2], 16);
+  } else {
+    r = parseInt(h.slice(0, 2), 16);
+    g = parseInt(h.slice(2, 4), 16);
+    b = parseInt(h.slice(4, 6), 16);
+  }
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+function colorWithAlpha(color, alpha) {
+  if (color.startsWith("#")) return hexToRgba(color, alpha);
+  if (color.startsWith("rgba")) {
+    return color.replace(/,\s*[\d.]+\)$/, `,${alpha})`);
+  }
+  if (color.startsWith("rgb(")) {
+    return color.replace("rgb(", "rgba(").replace(")", `,${alpha})`);
+  }
+  return color;
+}
+function resolveChainColors(opts) {
+  if (opts?.theme && typeof opts.theme === "object" && opts.theme.chainColors) {
+    return opts.theme.chainColors;
+  }
+  return CHAIN_COLORS;
+}
+function darkLayout(opts) {
+  return {
+    paper_bgcolor: "#181b26",
+    plot_bgcolor: "#13151e",
+    font: { color: "#eaedf3", family: FONT, size: 12 },
+    title: { font: { size: 14, color: "#eaedf3" } },
+    xaxis: {
+      gridcolor: "#262a3a",
+      zerolinecolor: "#3a3f52",
+      linecolor: "#2f3447",
+      title: { font: { size: 12 }, standoff: 8 }
+    },
+    yaxis: {
+      gridcolor: "#262a3a",
+      zerolinecolor: "#3a3f52",
+      linecolor: "#2f3447",
+      title: { font: { size: 12 }, standoff: 8 }
+    },
+    margin: { t: 50, r: 24, b: 56, l: 64 },
+    height: opts?.height,
+    width: opts?.width,
+    legend: {
+      orientation: "h",
+      yanchor: "top",
+      y: -0.18,
+      xanchor: "center",
+      x: 0.5,
+      font: { size: 11 }
+    },
+    hoverlabel: {
+      bgcolor: "#1e2130",
+      bordercolor: "#3a3f52",
+      font: { color: "#eaedf3", size: 12 }
+    },
+    hovermode: "x unified"
+  };
+}
+function lightLayout(opts) {
+  return {
+    paper_bgcolor: "#ffffff",
+    plot_bgcolor: "#f8f9fa",
+    font: { color: "#1a1a1a", family: FONT, size: 12 },
+    title: { font: { size: 14, color: "#1a1a1a" } },
+    xaxis: {
+      gridcolor: "#e5e7eb",
+      zerolinecolor: "#d1d5db",
+      linecolor: "#d1d5db",
+      title: { font: { size: 12 }, standoff: 8 }
+    },
+    yaxis: {
+      gridcolor: "#e5e7eb",
+      zerolinecolor: "#d1d5db",
+      linecolor: "#d1d5db",
+      title: { font: { size: 12 }, standoff: 8 }
+    },
+    margin: { t: 50, r: 24, b: 56, l: 64 },
+    height: opts?.height,
+    width: opts?.width,
+    legend: {
+      orientation: "h",
+      yanchor: "top",
+      y: -0.18,
+      xanchor: "center",
+      x: 0.5,
+      font: { size: 11 }
+    },
+    hovermode: "x unified"
+  };
+}
+function customLayout(ct, opts) {
+  const base = darkLayout(opts);
+  const grid = ct.gridcolor ?? "#262a3a";
+  const zeroline = ct.zerolinecolor ?? grid;
+  const titleFont = {
+    ...base.title?.font,
+    ...ct.font?.color !== void 0 && { color: ct.font.color }
+  };
+  return {
+    ...base,
+    ...ct.paper_bgcolor !== void 0 && { paper_bgcolor: ct.paper_bgcolor },
+    ...ct.plot_bgcolor !== void 0 && { plot_bgcolor: ct.plot_bgcolor },
+    ...ct.font !== void 0 && {
+      font: { ...base.font, ...ct.font },
+      title: { ...base.title, font: titleFont }
+    },
+    ...ct.gridcolor !== void 0 && {
+      xaxis: {
+        ...base.xaxis,
+        gridcolor: grid,
+        zerolinecolor: zeroline
+      },
+      yaxis: {
+        ...base.yaxis,
+        gridcolor: grid,
+        zerolinecolor: zeroline
+      }
+    },
+    ...ct.hoverlabel !== void 0 && {
+      hoverlabel: { ...base.hoverlabel, ...ct.hoverlabel }
+    }
+  };
+}
+function getLayout(opts) {
+  if (!opts?.theme || opts.theme === "dark") return darkLayout(opts);
+  if (opts.theme === "light") return lightLayout(opts);
+  return customLayout(opts.theme, opts);
+}
+function getConfig() {
+  return {
+    responsive: true,
+    displaylogo: false,
+    toImageButtonOptions: { format: "png", height: 600, width: 1200, scale: 2 }
+  };
+}
+function getPlotly() {
+  const g = typeof globalThis !== "undefined" ? globalThis : void 0;
+  if (g?.["Plotly"]) return g["Plotly"];
+  try {
+    return require("plotly.js-dist-min");
+  } catch {
+  }
+  throw new Error(
+    'Plotly.js is not available.\nBrowser: <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>\nNode.js: npm install plotly.js-dist-min'
+  );
+}
 
 // src/plots/trace.ts
 function getTracePlotData(data, variable, opts) {
@@ -1518,14 +1541,20 @@ function tracePlotSpec(data, variable, opts) {
       type: "scatter",
       mode: "lines",
       name: s.chain,
-      line: { width: 0.8, color: s.color }
+      line: { width: 1, color: s.color },
+      hovertemplate: "%{y:.4f}<extra>%{fullData.name}</extra>"
     })),
     layout: {
       ...base,
-      title: { text: `Trace: ${variable}` },
-      xaxis: { ...base["xaxis"], title: { text: "Iteration" } },
-      yaxis: { ...base["yaxis"], title: { text: variable } },
-      legend: { orientation: "h", y: -0.15 }
+      title: { text: `Trace: ${variable}`, ...base["title"] },
+      xaxis: {
+        ...base["xaxis"],
+        title: { text: "Iteration", ...base["xaxis"]?.["title"] || {} }
+      },
+      yaxis: {
+        ...base["yaxis"],
+        title: { text: variable, ...base["yaxis"]?.["title"] || {} }
+      }
     },
     config: getConfig()
   };
@@ -1566,15 +1595,23 @@ function histogramPlot(container, data, variable, options) {
       x: Array.from(s.draws),
       type: "histogram",
       name: s.chain,
-      opacity: 0.6,
-      marker: { color: s.color }
+      opacity: 0.65,
+      marker: { color: colorWithAlpha(s.color, 0.7), line: { color: s.color, width: 1 } },
+      hovertemplate: "%{x:.3f}: %{y}<extra>%{fullData.name}</extra>"
     }));
+    const base = getLayout(options);
     const layout = {
-      ...getLayout(options),
-      title: { text: `Distribution: ${currentVar}` },
+      ...base,
+      title: { text: `Distribution: ${currentVar}`, ...base["title"] },
       barmode: "overlay",
-      xaxis: { ...getLayout(options).xaxis, title: currentVar },
-      yaxis: { ...getLayout(options).yaxis, title: "Count" }
+      xaxis: {
+        ...base["xaxis"],
+        title: { text: currentVar, ...base["xaxis"]?.["title"] || {} }
+      },
+      yaxis: {
+        ...base["yaxis"],
+        title: { text: "Count", ...base["yaxis"]?.["title"] || {} }
+      }
     };
     Plotly.react(container, traces, layout, getConfig());
   }
@@ -1628,16 +1665,23 @@ function autocorrelationPlot(container, data, variable, options) {
       type: "bar",
       name: s.chain,
       marker: { color: s.color },
-      opacity: 0.7
+      opacity: 0.7,
+      hovertemplate: "Lag %{x}: %{y:.3f}<extra>%{fullData.name}</extra>"
     }));
+    const base = getLayout(options);
     const layout = {
-      ...getLayout(options),
-      title: { text: `Autocorrelation: ${currentVar}` },
+      ...base,
+      title: { text: `Autocorrelation: ${currentVar}`, ...base["title"] },
       barmode: "group",
-      xaxis: { ...getLayout(options).xaxis, title: "Lag" },
+      bargap: 0.1,
+      xaxis: {
+        ...base["xaxis"],
+        title: { text: "Lag", ...base["xaxis"]?.["title"] || {} },
+        dtick: 10
+      },
       yaxis: {
-        ...getLayout(options).yaxis,
-        title: "ACF",
+        ...base["yaxis"],
+        title: { text: "ACF", ...base["yaxis"]?.["title"] || {} },
         range: [-0.2, 1.05]
       },
       shapes: [
@@ -1722,16 +1766,17 @@ function forestPlot(container, data, options) {
       showlegend: true,
       hoverinfo: "skip"
     };
+    const base = getLayout(options);
     const layout = {
-      ...getLayout(options),
-      title: { text: "Forest Plot" },
+      ...base,
+      title: { text: "Forest Plot", ...base["title"] },
       height: Math.max(300, vars.length * 50 + 100),
       xaxis: {
-        ...getLayout(options).xaxis,
-        title: "Value",
+        ...base["xaxis"],
+        title: { text: "Value", ...base["xaxis"]?.["title"] || {} },
         zeroline: true
       },
-      yaxis: { ...getLayout(options).yaxis, automargin: true },
+      yaxis: { ...base["yaxis"], automargin: true },
       shapes: [
         {
           type: "line",
@@ -1782,15 +1827,20 @@ function cumulativeMeanPlot(container, data, variable, options) {
       type: "scatter",
       mode: "lines",
       name: s.chain,
-      line: { width: 1.5, color: s.color }
+      line: { width: 1.5, color: s.color },
+      hovertemplate: "Iter %{x}: %{y:.4f}<extra>%{fullData.name}</extra>"
     }));
+    const base = getLayout(options);
     const layout = {
-      ...getLayout(options),
-      title: { text: `Cumulative Mean: ${currentVar}` },
-      xaxis: { ...getLayout(options).xaxis, title: "Iteration" },
+      ...base,
+      title: { text: `Cumulative Mean: ${currentVar}`, ...base["title"] },
+      xaxis: {
+        ...base["xaxis"],
+        title: { text: "Iteration", ...base["xaxis"]?.["title"] || {} }
+      },
       yaxis: {
-        ...getLayout(options).yaxis,
-        title: `Mean (${currentVar})`
+        ...base["yaxis"],
+        title: { text: `Mean (${currentVar})`, ...base["yaxis"]?.["title"] || {} }
       }
     };
     Plotly.react(container, traces, layout, getConfig());
@@ -1843,10 +1893,11 @@ function pairPlot(container, data, variables, options) {
       axisOverrides[`xaxis${i > 1 ? i : ""}`] = axisCfg();
       axisOverrides[`yaxis${i > 1 ? i : ""}`] = axisCfg();
     }
+    const base = getLayout(options);
     const layout = {
-      ...getLayout(options),
+      ...base,
       ...axisOverrides,
-      title: { text: "Pair Plot" },
+      title: { text: "Pair Plot", ...base["title"] },
       height: Math.max(400, vars.length * 180 + 60),
       dragmode: "select"
     };
@@ -1856,6 +1907,100 @@ function pairPlot(container, data, variables, options) {
   return {
     destroy: () => Plotly.purge(container),
     update: () => render()
+  };
+}
+
+// src/plots/scatter.ts
+function scatterPlot(container, data, variableX, variableY, options) {
+  const Plotly = getPlotly();
+  let curX = variableX;
+  let curY = variableY;
+  function render() {
+    const colors = resolveChainColors(options);
+    const size = options?.markerSize ?? 3;
+    const opacity = options?.markerOpacity ?? 0.4;
+    const traces = data.chainNames.map((chain, i) => ({
+      x: Array.from(data.getDraws(curX, chain)),
+      y: Array.from(data.getDraws(curY, chain)),
+      type: "scatter",
+      mode: "markers",
+      name: chain,
+      marker: {
+        size,
+        opacity,
+        color: colorWithAlpha(colors[i % colors.length], opacity),
+        line: { width: 0 }
+      },
+      hovertemplate: `${curX}: %{x:.3f}<br>${curY}: %{y:.3f}<extra>%{fullData.name}</extra>`
+    }));
+    const base = getLayout(options);
+    const layout = {
+      ...base,
+      title: { text: `${curX} vs ${curY}`, ...base["title"] },
+      xaxis: {
+        ...base["xaxis"],
+        title: { text: curX, ...base["xaxis"]?.["title"] || {} }
+      },
+      yaxis: {
+        ...base["yaxis"],
+        title: { text: curY, ...base["yaxis"]?.["title"] || {} }
+      },
+      hovermode: "closest"
+    };
+    Plotly.react(container, traces, layout, getConfig());
+  }
+  render();
+  return {
+    destroy: () => Plotly.purge(container),
+    update: (v) => {
+      if (v) curY = v;
+      render();
+    }
+  };
+}
+function scatter3dPlot(container, data, variableX, variableY, variableZ, options) {
+  const Plotly = getPlotly();
+  let curX = variableX;
+  let curY = variableY;
+  let curZ = variableZ;
+  function render() {
+    const colors = resolveChainColors(options);
+    const size = options?.markerSize ?? 2;
+    const opacity = options?.markerOpacity ?? 0.5;
+    const traces = data.chainNames.map((chain, i) => ({
+      x: Array.from(data.getDraws(curX, chain)),
+      y: Array.from(data.getDraws(curY, chain)),
+      z: Array.from(data.getDraws(curZ, chain)),
+      type: "scatter3d",
+      mode: "markers",
+      name: chain,
+      marker: {
+        size,
+        opacity,
+        color: colors[i % colors.length]
+      },
+      hovertemplate: `${curX}: %{x:.3f}<br>${curY}: %{y:.3f}<br>${curZ}: %{z:.3f}<extra>%{fullData.name}</extra>`
+    }));
+    const base = getLayout(options);
+    const layout = {
+      ...base,
+      title: { text: `${curX} \xD7 ${curY} \xD7 ${curZ}`, ...base["title"] },
+      scene: {
+        xaxis: { title: curX, gridcolor: base["xaxis"]?.["gridcolor"] },
+        yaxis: { title: curY, gridcolor: base["yaxis"]?.["gridcolor"] },
+        zaxis: { title: curZ, gridcolor: base["xaxis"]?.["gridcolor"] }
+      },
+      hovermode: "closest"
+    };
+    Plotly.react(container, traces, layout, getConfig());
+  }
+  render();
+  return {
+    destroy: () => Plotly.purge(container),
+    update: (v) => {
+      if (v) curZ = v;
+      render();
+    }
   };
 }
 
@@ -1982,18 +2127,23 @@ function rankPlot(container, data, variable, options) {
       y: s.counts,
       type: "bar",
       name: s.chain,
-      opacity: 0.6,
-      marker: { color: s.color }
+      opacity: 0.65,
+      marker: { color: colorWithAlpha(s.color, 0.7), line: { color: s.color, width: 1 } },
+      hovertemplate: "Rank %{x:.2f}: %{y}<extra>%{fullData.name}</extra>"
     }));
+    const base = getLayout(options);
     const layout = {
-      ...getLayout(options),
-      title: { text: `Rank Histogram: ${currentVar}` },
+      ...base,
+      title: { text: `Rank Histogram: ${currentVar}`, ...base["title"] },
       barmode: "overlay",
       xaxis: {
-        ...getLayout(options).xaxis,
-        title: "Normalized Rank"
+        ...base["xaxis"],
+        title: { text: "Normalized Rank", ...base["xaxis"]?.["title"] || {} }
       },
-      yaxis: { ...getLayout(options).yaxis, title: "Count" },
+      yaxis: {
+        ...base["yaxis"],
+        title: { text: "Count", ...base["yaxis"]?.["title"] || {} }
+      },
       shapes: [
         {
           type: "line",
@@ -2001,7 +2151,7 @@ function rankPlot(container, data, variable, options) {
           x1: 1,
           y0: totalN / nChains / nBins,
           y1: totalN / nChains / nBins,
-          line: { color: "#888", width: 1.5, dash: "dash" }
+          line: { color: "#aaa", width: 1.5, dash: "dash" }
         }
       ]
     };
@@ -2052,14 +2202,22 @@ function runningRhatPlot(container, data, variable, options) {
         type: "scatter",
         mode: "lines",
         name: "R\u0302",
-        line: { width: 2, color }
+        line: { width: 2, color },
+        hovertemplate: "Iter %{x}: R\u0302=%{y:.4f}<extra></extra>"
       }
     ];
+    const base = getLayout(options);
     const layout = {
-      ...getLayout(options),
-      title: { text: `Running R\u0302: ${currentVar}` },
-      xaxis: { ...getLayout(options).xaxis, title: "Iteration" },
-      yaxis: { ...getLayout(options).yaxis, title: "R\u0302" },
+      ...base,
+      title: { text: `Running R\u0302: ${currentVar}`, ...base["title"] },
+      xaxis: {
+        ...base["xaxis"],
+        title: { text: "Iteration", ...base["xaxis"]?.["title"] || {} }
+      },
+      yaxis: {
+        ...base["yaxis"],
+        title: { text: "R\u0302", ...base["yaxis"]?.["title"] || {} }
+      },
       shapes: [
         {
           type: "line",
@@ -2173,14 +2331,22 @@ function densityPlot(container, data, variable, options) {
       mode: "lines",
       name: curve.chain,
       fill: "tozeroy",
-      fillcolor: curve.color.replace(")", ",0.12)").replace("rgb", "rgba"),
-      line: { width: 2, color: curve.color }
+      fillcolor: colorWithAlpha(curve.color, 0.15),
+      line: { width: 2, color: curve.color },
+      hovertemplate: "%{y:.4f}<extra>%{fullData.name}</extra>"
     }));
+    const base = getLayout(options);
     const layout = {
-      ...getLayout(options),
-      title: { text: `Density: ${currentVar}` },
-      xaxis: { ...getLayout(options).xaxis, title: currentVar },
-      yaxis: { ...getLayout(options).yaxis, title: "Density" }
+      ...base,
+      title: { text: `Density: ${currentVar}`, ...base["title"] },
+      xaxis: {
+        ...base["xaxis"],
+        title: { text: currentVar, ...base["xaxis"]?.["title"] || {} }
+      },
+      yaxis: {
+        ...base["yaxis"],
+        title: { text: "Density", ...base["yaxis"]?.["title"] || {} }
+      }
     };
     Plotly.react(container, traces, layout, getConfig());
   }
@@ -2208,18 +2374,20 @@ function violinPlot(container, data, options) {
         box: { visible: true },
         meanline: { visible: true },
         line: { color: colors[vi % colors.length] },
-        fillcolor: colors[vi % colors.length].replace(")", ",0.3)").replace(
-          "rgb",
-          "rgba"
-        ),
+        fillcolor: colorWithAlpha(colors[vi % colors.length], 0.3),
         opacity: 0.85,
-        spanmode: "soft"
+        spanmode: "soft",
+        hovertemplate: "%{y:.4f}<extra>%{fullData.name}</extra>"
       };
     });
+    const base = getLayout(options);
     const layout = {
-      ...getLayout(options),
-      title: { text: "Violin Plot" },
-      yaxis: { ...getLayout(options).yaxis, title: "Value" },
+      ...base,
+      title: { text: "Violin Plot", ...base["title"] },
+      yaxis: {
+        ...base["yaxis"],
+        title: { text: "Value", ...base["yaxis"]?.["title"] || {} }
+      },
       showlegend: false,
       height: Math.max(350, data.variableNames.length * 60 + 150)
     };
@@ -2282,12 +2450,19 @@ function energyPlot(container, data, options) {
         });
       }
     });
+    const base = getLayout(options);
     const layout = {
-      ...getLayout(options),
-      title: { text: `Energy: ${energyVar}` },
+      ...base,
+      title: { text: `Energy: ${energyVar}`, ...base["title"] },
       barmode: "overlay",
-      xaxis: { ...getLayout(options).xaxis, title: energyVar },
-      yaxis: { ...getLayout(options).yaxis, title: "Density" }
+      xaxis: {
+        ...base["xaxis"],
+        title: { text: energyVar, ...base["xaxis"]?.["title"] || {} }
+      },
+      yaxis: {
+        ...base["yaxis"],
+        title: { text: "Density", ...base["yaxis"]?.["title"] || {} }
+      }
     };
     Plotly.react(container, traces, layout, getConfig());
   }
@@ -2325,15 +2500,20 @@ function ecdfPlot(container, data, variable, options) {
       type: "scatter",
       mode: "lines",
       name: s.chain,
-      line: { width: 2, shape: "hv", color: s.color }
+      line: { width: 2, shape: "hv", color: s.color },
+      hovertemplate: "%{x:.4f}: P=%{y:.3f}<extra>%{fullData.name}</extra>"
     }));
+    const base = getLayout(options);
     const layout = {
-      ...getLayout(options),
-      title: { text: `Empirical CDF: ${currentVar}` },
-      xaxis: { ...getLayout(options).xaxis, title: currentVar },
+      ...base,
+      title: { text: `Empirical CDF: ${currentVar}`, ...base["title"] },
+      xaxis: {
+        ...base["xaxis"],
+        title: { text: currentVar, ...base["xaxis"]?.["title"] || {} }
+      },
       yaxis: {
-        ...getLayout(options).yaxis,
-        title: "Cumulative Probability",
+        ...base["yaxis"],
+        title: { text: "Cumulative Probability", ...base["yaxis"]?.["title"] || {} },
         range: [0, 1]
       }
     };
@@ -2403,15 +2583,16 @@ function chainIntervalsPlot(container, data, variable, options) {
         hovertemplate: "%{y}<br>Mean=%{x:.3f}<br>90% HDI=[%{customdata[0]}, %{customdata[1]}]<extra></extra>"
       }
     ];
+    const base = getLayout(options);
     const layout = {
-      ...getLayout(options),
-      title: { text: `Chain Intervals: ${currentVar}` },
+      ...base,
+      title: { text: `Chain Intervals: ${currentVar}`, ...base["title"] },
       xaxis: {
-        ...getLayout(options).xaxis,
-        title: currentVar,
+        ...base["xaxis"],
+        title: { text: currentVar, ...base["xaxis"]?.["title"] || {} },
         range: [minX, maxX]
       },
-      yaxis: { ...getLayout(options).yaxis, automargin: true },
+      yaxis: { ...base["yaxis"], automargin: true },
       shapes: [
         {
           type: "rect",
@@ -2534,12 +2715,13 @@ function diagnosticsHeatmapPlot(container, data, options) {
     const customdata = summaries.map(
       (summary) => metrics.map((metric) => metric.raw(summary))
     );
+    const base = getLayout(options);
     const layout = {
-      ...getLayout(options),
-      title: { text: "Diagnostics Heatmap" },
-      xaxis: { ...getLayout(options).xaxis, side: "top" },
+      ...base,
+      title: { text: "Diagnostics Heatmap", ...base["title"] },
+      xaxis: { ...base["xaxis"], side: "top" },
       yaxis: {
-        ...getLayout(options).yaxis,
+        ...base["yaxis"],
         automargin: true,
         autorange: "reversed"
       },
