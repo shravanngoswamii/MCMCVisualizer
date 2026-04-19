@@ -98,12 +98,13 @@ export function diagnosticsHeatmapPlot(
 			metrics.map((metric) => metric.raw(summary)),
 		);
 
+		const base = getLayout(options);
 		const layout = {
-			...getLayout(options),
-			title: { text: "Diagnostics Heatmap" },
-			xaxis: { ...(getLayout(options).xaxis as object), side: "top" as const },
+			...base,
+			title: { text: "Diagnostics Heatmap", ...(base["title"] as object) },
+			xaxis: { ...(base["xaxis"] as object), side: "top" as const },
 			yaxis: {
-				...(getLayout(options).yaxis as object),
+				...(base["yaxis"] as object),
 				automargin: true,
 				autorange: "reversed" as const,
 			},

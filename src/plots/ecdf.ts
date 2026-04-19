@@ -41,15 +41,20 @@ export function ecdfPlot(
 			mode: "lines" as const,
 			name: s.chain,
 			line: { width: 2, shape: "hv" as const, color: s.color },
+			hovertemplate: "%{x:.4f}: P=%{y:.3f}<extra>%{fullData.name}</extra>",
 		}));
 
+		const base = getLayout(options);
 		const layout = {
-			...getLayout(options),
-			title: { text: `Empirical CDF: ${currentVar}` },
-			xaxis: { ...(getLayout(options).xaxis as object), title: currentVar },
+			...base,
+			title: { text: `Empirical CDF: ${currentVar}`, ...(base["title"] as object) },
+			xaxis: {
+				...(base["xaxis"] as object),
+				title: { text: currentVar, ...(((base["xaxis"] as Record<string, unknown>)?.["title"] as object) || {}) },
+			},
 			yaxis: {
-				...(getLayout(options).yaxis as object),
-				title: "Cumulative Probability",
+				...(base["yaxis"] as object),
+				title: { text: "Cumulative Probability", ...(((base["yaxis"] as Record<string, unknown>)?.["title"] as object) || {}) },
 				range: [0, 1],
 			},
 		};

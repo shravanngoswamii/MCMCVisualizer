@@ -4,6 +4,7 @@ export { autocorrelationPlot, getAutocorPlotData } from "./autocorrelation";
 export { forestPlot, getForestPlotData } from "./forest";
 export { cumulativeMeanPlot, getCumMeanPlotData } from "./cumulative-mean";
 export { pairPlot } from "./pairs";
+export { scatterPlot, scatter3dPlot } from "./scatter";
 export { summaryTable } from "./summary-table";
 export { rankPlot, getRankPlotData } from "./rank";
 export { runningRhatPlot, getRunningRhatData } from "./running-rhat";
@@ -18,6 +19,7 @@ export {
 } from "./diagnostics-heatmap";
 
 export type { PlotOptions, PlotHandle } from "./types";
+export type { ScatterPlotOptions } from "./scatter";
 export type {
 	TracePlotData,
 	DensityPlotData,

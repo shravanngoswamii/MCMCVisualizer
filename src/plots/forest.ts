@@ -75,16 +75,17 @@ export function forestPlot(
 			hoverinfo: "skip" as const,
 		};
 
+		const base = getLayout(options);
 		const layout = {
-			...getLayout(options),
-			title: { text: "Forest Plot" },
+			...base,
+			title: { text: "Forest Plot", ...(base["title"] as object) },
 			height: Math.max(300, vars.length * 50 + 100),
 			xaxis: {
-				...(getLayout(options).xaxis as object),
-				title: "Value",
+				...(base["xaxis"] as object),
+				title: { text: "Value", ...(((base["xaxis"] as Record<string, unknown>)?.["title"] as object) || {}) },
 				zeroline: true,
 			},
-			yaxis: { ...(getLayout(options).yaxis as object), automargin: true },
+			yaxis: { ...(base["yaxis"] as object), automargin: true },
 			shapes: [
 				{
 					type: "line" as const,

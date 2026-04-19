@@ -2,10 +2,9 @@
  * Custom theme for full visual control over Plotly output.
  * Pass as `theme` in PlotOptions to override the built-in 'dark' or 'light' presets.
  *
- * Example — match the bayes app's dark design system:
  * ```ts
- * import { BAYES_THEME } from 'mcmc-visualizer/plots';
- * plots.tracePlot(el, data, variable, { theme: BAYES_THEME });
+ * const myTheme: CustomTheme = { paper_bgcolor: 'transparent', font: { color: '#eee' } };
+ * plots.tracePlot(el, data, variable, { theme: myTheme });
  * ```
  */
 export interface CustomTheme {
@@ -62,6 +61,40 @@ export const CHAIN_COLORS = [
 const FONT = "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
 /**
+ * Convert any hex color to rgba with given alpha.
+ * Handles #RGB, #RRGGBB, and #RRGGBBAA formats.
+ */
+export function hexToRgba(hex: string, alpha: number): string {
+	const h = hex.replace("#", "");
+	let r: number, g: number, b: number;
+	if (h.length === 3) {
+		r = parseInt(h[0]! + h[0]!, 16);
+		g = parseInt(h[1]! + h[1]!, 16);
+		b = parseInt(h[2]! + h[2]!, 16);
+	} else {
+		r = parseInt(h.slice(0, 2), 16);
+		g = parseInt(h.slice(2, 4), 16);
+		b = parseInt(h.slice(4, 6), 16);
+	}
+	return `rgba(${r},${g},${b},${alpha})`;
+}
+
+/**
+ * Convert a color string to rgba with given alpha.
+ * Supports hex (#RRGGBB), rgb(), and rgba() formats.
+ */
+export function colorWithAlpha(color: string, alpha: number): string {
+	if (color.startsWith("#")) return hexToRgba(color, alpha);
+	if (color.startsWith("rgba")) {
+		return color.replace(/,\s*[\d.]+\)$/, `,${alpha})`);
+	}
+	if (color.startsWith("rgb(")) {
+		return color.replace("rgb(", "rgba(").replace(")", `,${alpha})`);
+	}
+	return color;
+}
+
+/**
  * Resolve chain colors from PlotOptions.
  * Returns the custom chainColors if supplied, otherwise the built-in palette.
  */
@@ -77,24 +110,36 @@ export function darkLayout(opts?: PlotOptions): Record<string, unknown> {
 		paper_bgcolor: "#181b26",
 		plot_bgcolor: "#13151e",
 		font: { color: "#eaedf3", family: FONT, size: 12 },
+		title: { font: { size: 14, color: "#eaedf3" } },
 		xaxis: {
 			gridcolor: "#262a3a",
 			zerolinecolor: "#3a3f52",
 			linecolor: "#2f3447",
+			title: { font: { size: 12 }, standoff: 8 },
 		},
 		yaxis: {
 			gridcolor: "#262a3a",
 			zerolinecolor: "#3a3f52",
 			linecolor: "#2f3447",
+			title: { font: { size: 12 }, standoff: 8 },
 		},
-		margin: { t: 40, r: 20, b: 50, l: 60 },
+		margin: { t: 50, r: 24, b: 56, l: 64 },
 		height: opts?.height,
 		width: opts?.width,
+		legend: {
+			orientation: "h" as const,
+			yanchor: "top",
+			y: -0.18,
+			xanchor: "center",
+			x: 0.5,
+			font: { size: 11 },
+		},
 		hoverlabel: {
 			bgcolor: "#1e2130",
 			bordercolor: "#3a3f52",
-			font: { color: "#eaedf3" },
+			font: { color: "#eaedf3", size: 12 },
 		},
+		hovermode: "x unified",
 	};
 }
 
@@ -103,19 +148,31 @@ export function lightLayout(opts?: PlotOptions): Record<string, unknown> {
 		paper_bgcolor: "#ffffff",
 		plot_bgcolor: "#f8f9fa",
 		font: { color: "#1a1a1a", family: FONT, size: 12 },
+		title: { font: { size: 14, color: "#1a1a1a" } },
 		xaxis: {
 			gridcolor: "#e5e7eb",
 			zerolinecolor: "#d1d5db",
 			linecolor: "#d1d5db",
+			title: { font: { size: 12 }, standoff: 8 },
 		},
 		yaxis: {
 			gridcolor: "#e5e7eb",
 			zerolinecolor: "#d1d5db",
 			linecolor: "#d1d5db",
+			title: { font: { size: 12 }, standoff: 8 },
 		},
-		margin: { t: 40, r: 20, b: 50, l: 60 },
+		margin: { t: 50, r: 24, b: 56, l: 64 },
 		height: opts?.height,
 		width: opts?.width,
+		legend: {
+			orientation: "h" as const,
+			yanchor: "top",
+			y: -0.18,
+			xanchor: "center",
+			x: 0.5,
+			font: { size: 11 },
+		},
+		hovermode: "x unified",
 	};
 }
 
@@ -126,12 +183,17 @@ function customLayout(
 	const base = darkLayout(opts);
 	const grid = ct.gridcolor ?? "#262a3a";
 	const zeroline = ct.zerolinecolor ?? grid;
+	const titleFont = {
+		...((base.title as Record<string, unknown>)?.font as object),
+		...(ct.font?.color !== undefined && { color: ct.font.color }),
+	};
 	return {
 		...base,
 		...(ct.paper_bgcolor !== undefined && { paper_bgcolor: ct.paper_bgcolor }),
 		...(ct.plot_bgcolor !== undefined && { plot_bgcolor: ct.plot_bgcolor }),
 		...(ct.font !== undefined && {
 			font: { ...(base.font as object), ...ct.font },
+			title: { ...(base.title as object), font: titleFont },
 		}),
 		...(ct.gridcolor !== undefined && {
 			xaxis: {
@@ -185,43 +247,4 @@ export function getPlotly(): any {
 	);
 }
 
-/**
- * Pre-built theme matching the bayes app dark design system.
- * Uses the exact background colors, grid colors, and chain palette from the app.
- *
- * ```ts
- * import { plots, BAYES_DARK_THEME } from 'mcmc-visualizer';
- * plots.tracePlot(el, data, variable, { theme: BAYES_DARK_THEME });
- * ```
- */
-export const BAYES_DARK_THEME: CustomTheme = {
-	paper_bgcolor: "transparent",
-	plot_bgcolor: "transparent",
-	font: { color: "#FFFFFF", family: "Inter, system-ui, sans-serif", size: 12 },
-	gridcolor: "#7C7C7C",
-	zerolinecolor: "#9E9E9E",
-	hoverlabel: {
-		bgcolor: "#222224",
-		bordercolor: "#9E9E9E",
-		font: { color: "#FFFFFF" },
-	},
-	// chainColorForIndex palette from bayes app (distinctipy)
-	chainColors: [
-		"#1E6759",
-		"#2894b2",
-		"#ff8000",
-		"#0080ff",
-		"#80bf80",
-		"#470ba7",
-		"#c80b32",
-		"#fd7ee5",
-		"#027d30",
-		"#00ffff",
-		"#00ff80",
-		"#9c5a86",
-		"#808000",
-		"#8ed7fa",
-		"#80ff00",
-		"#6e52ff",
-	],
-};
+

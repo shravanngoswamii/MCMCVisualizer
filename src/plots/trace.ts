@@ -39,14 +39,20 @@ export function tracePlotSpec(
 			type: "scatter" as const,
 			mode: "lines" as const,
 			name: s.chain,
-			line: { width: 0.8, color: s.color },
+			line: { width: 1, color: s.color },
+			hovertemplate: "%{y:.4f}<extra>%{fullData.name}</extra>",
 		})),
 		layout: {
 			...base,
-			title: { text: `Trace: ${variable}` },
-			xaxis: { ...(base["xaxis"] as object), title: { text: "Iteration" } },
-			yaxis: { ...(base["yaxis"] as object), title: { text: variable } },
-			legend: { orientation: "h" as const, y: -0.15 },
+			title: { text: `Trace: ${variable}`, ...(base["title"] as object) },
+			xaxis: {
+				...(base["xaxis"] as object),
+				title: { text: "Iteration", ...(((base["xaxis"] as Record<string, unknown>)?.["title"] as object) || {}) },
+			},
+			yaxis: {
+				...(base["yaxis"] as object),
+				title: { text: variable, ...(((base["yaxis"] as Record<string, unknown>)?.["title"] as object) || {}) },
+			},
 		},
 		config: getConfig(),
 	};

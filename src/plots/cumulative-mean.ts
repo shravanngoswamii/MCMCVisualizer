@@ -49,14 +49,19 @@ export function cumulativeMeanPlot(
 			mode: "lines" as const,
 			name: s.chain,
 			line: { width: 1.5, color: s.color },
+			hovertemplate: "Iter %{x}: %{y:.4f}<extra>%{fullData.name}</extra>",
 		}));
+		const base = getLayout(options);
 		const layout = {
-			...getLayout(options),
-			title: { text: `Cumulative Mean: ${currentVar}` },
-			xaxis: { ...(getLayout(options).xaxis as object), title: "Iteration" },
+			...base,
+			title: { text: `Cumulative Mean: ${currentVar}`, ...(base["title"] as object) },
+			xaxis: {
+				...(base["xaxis"] as object),
+				title: { text: "Iteration", ...(((base["xaxis"] as Record<string, unknown>)?.["title"] as object) || {}) },
+			},
 			yaxis: {
-				...(getLayout(options).yaxis as object),
-				title: `Mean (${currentVar})`,
+				...(base["yaxis"] as object),
+				title: { text: `Mean (${currentVar})`, ...(((base["yaxis"] as Record<string, unknown>)?.["title"] as object) || {}) },
 			},
 		};
 		Plotly.react(container, traces, layout, getConfig());

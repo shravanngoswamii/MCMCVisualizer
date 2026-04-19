@@ -1,7 +1,13 @@
 import type { InferenceData } from "../types";
 import type { PlotOptions, PlotHandle } from "./types";
 import type { RankPlotData } from "./data-types";
-import { getPlotly, getLayout, getConfig, resolveChainColors } from "./types";
+import {
+	getPlotly,
+	getLayout,
+	getConfig,
+	resolveChainColors,
+	colorWithAlpha,
+} from "./types";
 
 export function getRankPlotData(
 	data: InferenceData,
@@ -74,19 +80,24 @@ export function rankPlot(
 			y: s.counts,
 			type: "bar" as const,
 			name: s.chain,
-			opacity: 0.6,
-			marker: { color: s.color },
+			opacity: 0.65,
+			marker: { color: colorWithAlpha(s.color, 0.7), line: { color: s.color, width: 1 } },
+			hovertemplate: "Rank %{x:.2f}: %{y}<extra>%{fullData.name}</extra>",
 		}));
 
+		const base = getLayout(options);
 		const layout = {
-			...getLayout(options),
-			title: { text: `Rank Histogram: ${currentVar}` },
+			...base,
+			title: { text: `Rank Histogram: ${currentVar}`, ...(base["title"] as object) },
 			barmode: "overlay" as const,
 			xaxis: {
-				...(getLayout(options).xaxis as object),
-				title: "Normalized Rank",
+				...(base["xaxis"] as object),
+				title: { text: "Normalized Rank", ...(((base["xaxis"] as Record<string, unknown>)?.["title"] as object) || {}) },
 			},
-			yaxis: { ...(getLayout(options).yaxis as object), title: "Count" },
+			yaxis: {
+				...(base["yaxis"] as object),
+				title: { text: "Count", ...(((base["yaxis"] as Record<string, unknown>)?.["title"] as object) || {}) },
+			},
 			shapes: [
 				{
 					type: "line" as const,
@@ -94,7 +105,7 @@ export function rankPlot(
 					x1: 1,
 					y0: totalN / nChains / nBins,
 					y1: totalN / nChains / nBins,
-					line: { color: "#888", width: 1.5, dash: "dash" as const },
+					line: { color: "#aaa", width: 1.5, dash: "dash" as const },
 				},
 			],
 		};

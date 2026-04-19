@@ -49,10 +49,11 @@ export function pairPlot(
 			axisOverrides[`yaxis${i > 1 ? i : ""}`] = axisCfg();
 		}
 
+		const base = getLayout(options);
 		const layout = {
-			...getLayout(options),
+			...base,
 			...axisOverrides,
-			title: { text: "Pair Plot" },
+			title: { text: "Pair Plot", ...(base["title"] as object) },
 			height: Math.max(400, vars.length * 180 + 60),
 			dragmode: "select" as const,
 		};

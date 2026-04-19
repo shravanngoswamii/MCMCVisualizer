@@ -55,14 +55,22 @@ export function runningRhatPlot(
 				mode: "lines" as const,
 				name: "R\u0302",
 				line: { width: 2, color },
+				hovertemplate: "Iter %{x}: R\u0302=%{y:.4f}<extra></extra>",
 			},
 		];
 
+		const base = getLayout(options);
 		const layout = {
-			...getLayout(options),
-			title: { text: `Running R\u0302: ${currentVar}` },
-			xaxis: { ...(getLayout(options).xaxis as object), title: "Iteration" },
-			yaxis: { ...(getLayout(options).yaxis as object), title: "R\u0302" },
+			...base,
+			title: { text: `Running R\u0302: ${currentVar}`, ...(base["title"] as object) },
+			xaxis: {
+				...(base["xaxis"] as object),
+				title: { text: "Iteration", ...(((base["xaxis"] as Record<string, unknown>)?.["title"] as object) || {}) },
+			},
+			yaxis: {
+				...(base["yaxis"] as object),
+				title: { text: "R\u0302", ...(((base["yaxis"] as Record<string, unknown>)?.["title"] as object) || {}) },
+			},
 			shapes: [
 				{
 					type: "line" as const,

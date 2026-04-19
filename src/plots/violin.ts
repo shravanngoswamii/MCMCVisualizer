@@ -1,6 +1,6 @@
 import type { InferenceData } from "../types";
 import type { PlotOptions, PlotHandle } from "./types";
-import { getPlotly, getLayout, getConfig, resolveChainColors } from "./types";
+import { getPlotly, getLayout, getConfig, resolveChainColors, colorWithAlpha } from "./types";
 
 export function violinPlot(
 	container: HTMLElement,
@@ -20,19 +20,21 @@ export function violinPlot(
 				box: { visible: true },
 				meanline: { visible: true },
 				line: { color: colors[vi % colors.length] },
-				fillcolor: colors[vi % colors.length]!.replace(")", ",0.3)").replace(
-					"rgb",
-					"rgba",
-				),
+				fillcolor: colorWithAlpha(colors[vi % colors.length]!, 0.3),
 				opacity: 0.85,
 				spanmode: "soft" as const,
+				hovertemplate: "%{y:.4f}<extra>%{fullData.name}</extra>",
 			};
 		});
 
+		const base = getLayout(options);
 		const layout = {
-			...getLayout(options),
-			title: { text: "Violin Plot" },
-			yaxis: { ...(getLayout(options).yaxis as object), title: "Value" },
+			...base,
+			title: { text: "Violin Plot", ...(base["title"] as object) },
+			yaxis: {
+				...(base["yaxis"] as object),
+				title: { text: "Value", ...(((base["yaxis"] as Record<string, unknown>)?.["title"] as object) || {}) },
+			},
 			showlegend: false,
 			height: Math.max(350, data.variableNames.length * 60 + 150),
 		};

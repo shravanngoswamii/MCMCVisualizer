@@ -1,7 +1,13 @@
 import type { InferenceData } from "../types";
 import type { PlotOptions, PlotHandle } from "./types";
 import type { HistogramPlotData } from "./data-types";
-import { getPlotly, getLayout, getConfig, resolveChainColors } from "./types";
+import {
+	getPlotly,
+	getLayout,
+	getConfig,
+	resolveChainColors,
+	colorWithAlpha,
+} from "./types";
 
 export function getHistogramPlotData(
 	data: InferenceData,
@@ -32,15 +38,23 @@ export function histogramPlot(
 			x: Array.from(s.draws),
 			type: "histogram" as const,
 			name: s.chain,
-			opacity: 0.6,
-			marker: { color: s.color },
+			opacity: 0.65,
+			marker: { color: colorWithAlpha(s.color, 0.7), line: { color: s.color, width: 1 } },
+			hovertemplate: "%{x:.3f}: %{y}<extra>%{fullData.name}</extra>",
 		}));
+		const base = getLayout(options);
 		const layout = {
-			...getLayout(options),
-			title: { text: `Distribution: ${currentVar}` },
+			...base,
+			title: { text: `Distribution: ${currentVar}`, ...(base["title"] as object) },
 			barmode: "overlay" as const,
-			xaxis: { ...(getLayout(options).xaxis as object), title: currentVar },
-			yaxis: { ...(getLayout(options).yaxis as object), title: "Count" },
+			xaxis: {
+				...(base["xaxis"] as object),
+				title: { text: currentVar, ...(((base["xaxis"] as Record<string, unknown>)?.["title"] as object) || {}) },
+			},
+			yaxis: {
+				...(base["yaxis"] as object),
+				title: { text: "Count", ...(((base["yaxis"] as Record<string, unknown>)?.["title"] as object) || {}) },
+			},
 		};
 		Plotly.react(container, traces, layout, getConfig());
 	}

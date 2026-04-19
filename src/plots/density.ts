@@ -1,7 +1,13 @@
 import type { InferenceData } from "../types";
 import type { PlotOptions, PlotHandle } from "./types";
 import type { DensityPlotData } from "./data-types";
-import { getPlotly, getLayout, getConfig, resolveChainColors } from "./types";
+import {
+	getPlotly,
+	getLayout,
+	getConfig,
+	resolveChainColors,
+	colorWithAlpha,
+} from "./types";
 
 function kde(
 	values: Float64Array,
@@ -89,15 +95,23 @@ export function densityPlot(
 			mode: "lines" as const,
 			name: curve.chain,
 			fill: "tozeroy" as const,
-			fillcolor: curve.color.replace(")", ",0.12)").replace("rgb", "rgba"),
+			fillcolor: colorWithAlpha(curve.color, 0.15),
 			line: { width: 2, color: curve.color },
+			hovertemplate: "%{y:.4f}<extra>%{fullData.name}</extra>",
 		}));
 
+		const base = getLayout(options);
 		const layout = {
-			...getLayout(options),
-			title: { text: `Density: ${currentVar}` },
-			xaxis: { ...(getLayout(options).xaxis as object), title: currentVar },
-			yaxis: { ...(getLayout(options).yaxis as object), title: "Density" },
+			...base,
+			title: { text: `Density: ${currentVar}`, ...(base["title"] as object) },
+			xaxis: {
+				...(base["xaxis"] as object),
+				title: { text: currentVar, ...(((base["xaxis"] as Record<string, unknown>)?.["title"] as object) || {}) },
+			},
+			yaxis: {
+				...(base["yaxis"] as object),
+				title: { text: "Density", ...(((base["yaxis"] as Record<string, unknown>)?.["title"] as object) || {}) },
+			},
 		};
 
 		Plotly.react(container, traces, layout, getConfig());

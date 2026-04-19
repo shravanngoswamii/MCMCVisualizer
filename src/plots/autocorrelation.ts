@@ -56,15 +56,22 @@ export function autocorrelationPlot(
 			name: s.chain,
 			marker: { color: s.color },
 			opacity: 0.7,
+			hovertemplate: "Lag %{x}: %{y:.3f}<extra>%{fullData.name}</extra>",
 		}));
+		const base = getLayout(options);
 		const layout = {
-			...getLayout(options),
-			title: { text: `Autocorrelation: ${currentVar}` },
+			...base,
+			title: { text: `Autocorrelation: ${currentVar}`, ...(base["title"] as object) },
 			barmode: "group" as const,
-			xaxis: { ...(getLayout(options).xaxis as object), title: "Lag" },
+			bargap: 0.1,
+			xaxis: {
+				...(base["xaxis"] as object),
+				title: { text: "Lag", ...(((base["xaxis"] as Record<string, unknown>)?.["title"] as object) || {}) },
+				dtick: 10,
+			},
 			yaxis: {
-				...(getLayout(options).yaxis as object),
-				title: "ACF",
+				...(base["yaxis"] as object),
+				title: { text: "ACF", ...(((base["yaxis"] as Record<string, unknown>)?.["title"] as object) || {}) },
 				range: [-0.2, 1.05],
 			},
 			shapes: [

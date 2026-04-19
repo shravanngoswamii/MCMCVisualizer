@@ -66,15 +66,16 @@ export function chainIntervalsPlot(
 			},
 		];
 
+		const base = getLayout(options);
 		const layout = {
-			...getLayout(options),
-			title: { text: `Chain Intervals: ${currentVar}` },
+			...base,
+			title: { text: `Chain Intervals: ${currentVar}`, ...(base["title"] as object) },
 			xaxis: {
-				...(getLayout(options).xaxis as object),
-				title: currentVar,
+				...(base["xaxis"] as object),
+				title: { text: currentVar, ...(((base["xaxis"] as Record<string, unknown>)?.["title"] as object) || {}) },
 				range: [minX, maxX],
 			},
-			yaxis: { ...(getLayout(options).yaxis as object), automargin: true },
+			yaxis: { ...(base["yaxis"] as object), automargin: true },
 			shapes: [
 				{
 					type: "rect" as const,

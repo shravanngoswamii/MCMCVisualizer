@@ -67,12 +67,19 @@ export function energyPlot(
 			}
 		});
 
+		const base = getLayout(options);
 		const layout = {
-			...getLayout(options),
-			title: { text: `Energy: ${energyVar}` },
+			...base,
+			title: { text: `Energy: ${energyVar}`, ...(base["title"] as object) },
 			barmode: "overlay" as const,
-			xaxis: { ...(getLayout(options).xaxis as object), title: energyVar },
-			yaxis: { ...(getLayout(options).yaxis as object), title: "Density" },
+			xaxis: {
+				...(base["xaxis"] as object),
+				title: { text: energyVar, ...(((base["xaxis"] as Record<string, unknown>)?.["title"] as object) || {}) },
+			},
+			yaxis: {
+				...(base["yaxis"] as object),
+				title: { text: "Density", ...(((base["yaxis"] as Record<string, unknown>)?.["title"] as object) || {}) },
+			},
 		};
 
 		Plotly.react(container, traces, layout, getConfig());
