@@ -34,6 +34,9 @@ jobs:
         working-directory: examples/bayes-workflow-demo
         run: npm run build
 
+      - name: Create npm package tarball
+        run: npm pack
+
       - name: Prepare deploy directory
         run: |
           mkdir -p deploy/dist
@@ -42,6 +45,11 @@ jobs:
           cp dist/index.js dist/index.js.map deploy/dist/
           cp dist/index.cjs dist/index.cjs.map deploy/dist/
           cp dist/index.d.ts dist/index.d.cts deploy/dist/
+
+          # npm tarball (for installing as dependency via URL)
+          cp mcmc-visualizer-*.tgz deploy/
+          # Create a stable-name symlink so consumers can use a fixed URL
+          ln -sf mcmc-visualizer-*.tgz deploy/mcmc-visualizer-latest.tgz
 
           # Vanilla demo at root
           cp examples/demo/index.html deploy/index.html
