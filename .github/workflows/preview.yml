@@ -22,7 +22,6 @@ jobs:
           node-version: 20
           cache: npm
 
-      # ── Build package ─────────────────────────────────────────────────
       - run: npm ci
 
       - name: Run tests
@@ -31,7 +30,11 @@ jobs:
       - name: Build package
         run: npm run build
 
-      # ── Build Vue workflow demo ────────────────────────────────────────
+      - name: Build docs
+        run: npm run docs:build
+        env:
+          DOCS_BASE: /MCMCVisualizer/pr-previews/${{ github.event.pull_request.number }}/docs/
+
       - name: Install workflow demo dependencies
         working-directory: examples/workflow-demo
         run: npm ci
@@ -40,27 +43,28 @@ jobs:
         working-directory: examples/workflow-demo
         run: npm run build
 
-      # ── Assemble deploy directory ─────────────────────────────────────
       - name: Prepare deploy directory
         run: |
-          mkdir -p deploy/dist
+          mkdir -p deploy/examples/dist
+          cp dist/index.js dist/index.js.map deploy/examples/dist/
+          cp dist/index.cjs dist/index.cjs.map deploy/examples/dist/
 
-          cp dist/index.js dist/index.js.map deploy/dist/
-          cp dist/index.cjs dist/index.cjs.map deploy/dist/
+          mkdir -p deploy/examples/demo
+          cp examples/demo/index.html deploy/examples/demo/index.html
+          sed -i "s|../../dist/index.js|../dist/index.js|g" deploy/examples/demo/index.html
 
-          mkdir -p deploy/demo
-          cp examples/demo/index.html deploy/demo/index.html
-          sed -i "s|../../dist/index.js|../dist/index.js|g" deploy/demo/index.html
+          mkdir -p deploy/examples/workflow-demo
+          cp -r examples/workflow-demo/dist/. deploy/examples/workflow-demo/
 
-          mkdir -p deploy/workflow-demo
-          cp -r examples/workflow-demo/dist/. deploy/workflow-demo/
+          mkdir -p deploy/docs
+          cp -r docs/.vitepress/dist/. deploy/docs/
 
       - name: Deploy preview
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
           folder: ./deploy
-          target-folder: pr-previews/${{ github.event.pull_request.number }}/examples
+          target-folder: pr-previews/${{ github.event.pull_request.number }}
           clean: false
           commit-message: "Preview for PR #${{ github.event.pull_request.number }}"
 
@@ -73,6 +77,7 @@ jobs:
 
             | Page | URL |
             |------|-----|
+            | Docs | https://shravanngoswamii.github.io/MCMCVisualizer/pr-previews/${{ github.event.pull_request.number }}/docs/ |
             | Demo | https://shravanngoswamii.github.io/MCMCVisualizer/pr-previews/${{ github.event.pull_request.number }}/examples/demo/ |
             | Workflow demo | https://shravanngoswamii.github.io/MCMCVisualizer/pr-previews/${{ github.event.pull_request.number }}/examples/workflow-demo/ |
           comment_tag: preview-url-comment
@@ -99,8 +104,6 @@ jobs:
             git add .
             git diff --staged --quiet || git commit -m "Remove preview for PR #${PR_NUMBER}"
             git push
-          else
-            echo "Preview directory ${PREVIEW_DIR} not found, skipping."
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
