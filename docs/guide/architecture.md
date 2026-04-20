@@ -2,25 +2,18 @@
 
 The package is split into four independent layers. You can use any layer without depending on the ones above it.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  CLI  (mcmc summary / diagnose / ess / rhat / convert / plot)│
-├─────────────────────────────────────────────────────────────┤
-│  Visualization layer  (plots/*)                             │
-│  • get*PlotData()   — pure data extraction, no Plotly       │
-│  • *PlotSpec()      — Plotly JSON spec, no DOM              │
-│  • *Plot()          — DOM adapter, requires Plotly.js       │
-├─────────────────────────────────────────────────────────────┤
-│  InferenceData / MCMCData                                   │
-│  • sequenceStats()  variableStats()  summary()              │
-├─────────────────────────────────────────────────────────────┤
-│  Parsers                    │  Stats (functional)           │
-│  fromTuringCSV              │  computeESS / computeRhat     │
-│  fromStanCSV[Files]         │  computeMCSE / computeGeweke  │
-│  fromMCMCChainsJSON         │  computeHDI / computeQuantiles│
-│  fromArviZJSON              │  computeStdev / computeMean   │
-│  fromChainArrays            │  + FFT, special math fns      │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    P["Parsers\nfromTuringCSV · fromStanCSV · fromStanCSVFiles\nfromMCMCChainsJSON · fromArviZJSON · fromChainArrays"]
+    S["Stats  (functional)\ncomputeESS · computeRhat · computeMCSE\ncomputeGeweke · computeHDI · computeQuantiles"]
+    I["InferenceData / MCMCData\nsequenceStats() · variableStats() · summary()"]
+    V["Visualization Layer  (plots/*)\nget*PlotData() · *PlotSpec() · *Plot()"]
+    C["CLI\nmcmc summary · diagnose · ess · rhat · convert · plot"]
+
+    P --> I
+    S --> I
+    I --> V
+    V --> C
 ```
 
 ## Build outputs

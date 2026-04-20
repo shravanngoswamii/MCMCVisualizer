@@ -1,16 +1,18 @@
 # mcmc-visualizer
 
-Parse, analyze, and export MCMC sampling data in JavaScript/TypeScript. Zero dependencies, works in browser and Node.js.
+Parse, analyze, plot, and export MCMC sampling data in JavaScript/TypeScript. Zero runtime dependencies, works in browser and Node.js.
 
 ## Supported Formats
 
 | Format | Read | Write |
 |--------|------|-------|
-| Turing CSV (long) | ✅ | ✅ |
-| Turing CSV (wide) | ✅ | ✅ |
-| Stan CSV | ✅ | ✅ |
-| Wide CSV | ✅ | ✅ |
-| JSON | — | ✅ |
+| Turing.jl CSV (long) | yes | — |
+| Turing.jl CSV (wide) | yes | — |
+| Stan CSV | yes | — |
+| MCMCChains.jl JSON | yes | — |
+| ArviZ JSON | yes | — |
+| Generic JSON | yes | yes |
+| Raw arrays | yes | — |
 
 ## Install
 
@@ -64,23 +66,24 @@ Built-in MCMC diagnostics with no dependencies:
 - **Quantiles** (5%, 25%, 50%, 75%, 95%)
 
 ```typescript
-import { computeESS, computeRhat, computeHDI } from 'mcmc-visualizer';
+import { computeESS, computeRhat, computeHDI, computeMCSE } from 'mcmc-visualizer';
 
 const { ess, autocorrelation } = computeESS(new Float64Array([...]));
-const rhat = computeRhat(chainMeans, chainStdevs, chainCounts);
+const rhat = computeRhat([chain1, chain2], 'rank');
 const [lo, hi] = computeHDI(new Float64Array([...]), 0.9);
 const mcse = computeMCSE(new Float64Array([...]));
-const shape = computeSkewness(new Float64Array([...]));
 ```
 
 ## Export
 
 ```typescript
-const csv = data.toTuringCSV();      // Long format: chain,var,draw,value
-const wide = data.toWideCSV();       // Wide format: chain_,draw_,var1,var2,...
-const stan = data.toStanCSV();       // Stan CSV with comment headers
-const json = data.toJSON();          // JSON object { chain: { var: [...] } }
+import { toJSON } from 'mcmc-visualizer';
+
+const json = toJSON(data);
+// Output: { "chain#1": { "mu": [1.2, 1.3, ...], "sigma": [...] }, "chain#2": { ... } }
 ```
+
+This format is readable by `fromChainArrays()` after `JSON.parse()`.
 
 ## Data Manipulation
 
@@ -139,9 +142,11 @@ Works directly in the browser with any bundler or via CDN:
 
 | Function | Description |
 |----------|-------------|
-| `fromTuringCSV(text)` | Parse Turing CSV (long or wide format) |
+| `fromTuringCSV(text)` | Parse Turing.jl CSV (long or wide format) |
 | `fromStanCSV(text)` | Parse a single Stan CSV file |
 | `fromStanCSVFiles(files)` | Parse multiple Stan CSV files as separate chains |
+| `fromMCMCChainsJSON(text)` | Parse MCMCChains.jl JSON export |
+| `fromArviZJSON(input)` | Parse ArviZ JSON (posterior group only) |
 | `fromAutoDetect(text)` | Auto-detect format and parse |
 | `fromChainArrays(data)` | Construct from `{ chain: { var: number[] } }` |
 
@@ -154,29 +159,32 @@ Works directly in the browser with any bundler or via CDN:
 | `.sequenceStats(variable, chain)` | `SequenceStats` |
 | `.variableStats(variable)` | `VariableStats` |
 | `.summary()` | `VariableSummary[]` |
-| `.toTuringCSV()` | `string` |
-| `.toStanCSV()` | `string` |
-| `.toWideCSV()` | `string` |
-| `.toJSON()` | `string` |
 | `.slice(start, end?)` | `InferenceData` |
 | `.filterChains(names)` | `InferenceData` |
 | `.filterVariables(names)` | `InferenceData` |
+
+### Export
+
+| Function | Description |
+|----------|-------------|
+| `toJSON(data)` | Serialize to `{ chain: { var: number[] } }` JSON string |
+| `detectFormat(text)` | Detect file format: `'turing-csv' \| 'stan-csv' \| 'mcmcchains-json' \| 'unknown'` |
 
 ### Standalone Stats
 
 | Function | Description |
 |----------|-------------|
 | `computeESS(chain)` | FFT-based effective sample size |
-| `computeRhat(means, stdevs, counts)` | Gelman-Rubin R-hat |
-| `computeMCSE(chain)` | Monte Carlo standard error |
-| `computeBulkESS(chains)` | Rank-normalized bulk ESS |
-| `computeTailESS(chains)` | Tail ESS |
-| `computeGeweke(chain)` | Geweke z-score and p-value |
+| `computeEssBulk(chains)` | Rank-normalized bulk ESS |
+| `computeEssTail(chains)` | Tail ESS |
+| `computeRhat(chains, kind?)` | Rank-normalized R-hat (`'rank' \| 'bulk' \| 'tail' \| 'basic'`) |
 | `computeSplitRhat(chains)` | Split-chain R-hat |
+| `computeMCSE(chain)` | Monte Carlo standard error |
+| `computeMCSEMultiChain(chains)` | Multi-chain MCSE via bulk ESS |
+| `computeGeweke(chain)` | Geweke z-score and p-value |
 | `computeMean(arr)` | Arithmetic mean |
 | `computeStdev(arr)` | Standard deviation |
 | `computeSkewness(arr)` | Standardized third moment |
 | `computeExcessKurtosis(arr)` | Standardized fourth moment minus 3 |
 | `computeQuantiles(arr)` | 5/25/50/75/95th percentiles |
 | `computeHDI(arr, mass?)` | Highest density interval |
-| `detectFormat(text)` | Detect file format |
