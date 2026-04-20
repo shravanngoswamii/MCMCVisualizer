@@ -21,23 +21,17 @@ hero:
       target: _blank
 
 features:
-  - icon: 📊
-    title: 15+ Plot Types
+  - title: 15+ Plot Types
     details: Trace plots, density plots, ACF, rank plots, pair plots, violin plots, forest plots, diagnostics heatmaps, and more — all powered by Plotly.js.
-  - icon: 🔢
-    title: Production-grade Diagnostics
+  - title: Production-grade Diagnostics
     details: Rank-normalized R-hat, bulk/tail ESS, MCSE (mean, quantile, std), Geweke z-test, HDI, and more — all matching Stan/ArviZ reference implementations.
-  - icon: 📂
-    title: Multiple Formats
-    details: Reads Turing.jl CSV (long & wide), Stan CSV, MCMCChains.jl JSON, ArviZ JSON, and raw arrays. Writes JSON. Auto-detection included.
-  - icon: ⚡
-    title: Zero Runtime Dependencies
+  - title: Multiple Formats
+    details: Reads Turing.jl CSV (long & wide), Stan CSV, MCMCChains.jl JSON, ArviZ JSON, and raw arrays. Writes generic JSON. Auto-detection included.
+  - title: Zero Runtime Dependencies
     details: All parsers and statistics are self-contained. Plotly.js is an optional peer dependency only for DOM rendering. Tree-shakeable ESM build.
-  - icon: 🖥️
-    title: CLI Included
+  - title: CLI Included
     details: Full-featured `mcmc` command — summary tables, diagnostics, ESS/R-hat, format conversion, and Plotly spec output — with JSON and table output modes.
-  - icon: 🔧
-    title: Three Rendering Layers
+  - title: Three Rendering Layers
     details: Use raw data objects for custom rendering, Plotly JSON specs for headless output, or DOM adapters for direct browser rendering. Each layer is independent.
 ---
 
@@ -71,10 +65,10 @@ const summary = data.summary();
 
 | Format | Read | Write |
 |--------|:----:|:-----:|
-| Turing.jl CSV (long) | ✅ | ✅ |
-| Turing.jl CSV (wide) | ✅ | ✅ |
-| Stan CSV | ✅ | — |
-| MCMCChains.jl JSON | ✅ | — |
-| ArviZ JSON | ✅ | — |
-| Generic JSON | ✅ | ✅ |
-| Raw arrays | ✅ | — |
+| Turing.jl CSV (long) | yes | — |
+| Turing.jl CSV (wide) | yes | — |
+| Stan CSV | yes | — |
+| MCMCChains.jl JSON | yes | — |
+| ArviZ JSON | yes | — |
+| Generic JSON | yes | yes |
+| Raw arrays | yes | — |
