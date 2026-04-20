@@ -28,8 +28,8 @@ export function pairPlot(
 				dimensions: dims,
 				name: chain,
 				marker: {
-					size: 2,
-					opacity: 0.3,
+					size: 3,
+					opacity: 0.55,
 					color: colors[i % colors.length],
 				},
 				showupperhalf: false,

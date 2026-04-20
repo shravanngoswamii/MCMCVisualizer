@@ -1,7 +1,7 @@
 /**
- * Accurate simulation of what the real bayes app actually receives.
+ * Simulates real-world MCMC sampler output (e.g. from Turing.jl / NUTS).
  *
- * The real app data has three distinct categories:
+ * The data has three distinct categories:
  *
  *   1. Model parameters as raw draws:
  *        θ[1]/val, θ[2]/val, …  (one Float64Array per variable per chain)
@@ -16,16 +16,14 @@
  *        θ[1]/stats[key]/stats/2/μ   = running mean (second pass)
  *        θ[1]/stats[key]/stats/2/σ2  = running variance
  *
- *  The real app has 47 θ-dimensions + 11 HMC internals = 58 variables,
- *  producing 58 × 5 = 290 statistics entries.
- *  This demo uses 20 θ-dimensions to match the real structure while
- *  staying fast in the browser.
+ *  This demo uses 20 θ-dimensions + 11 HMC internals = 31 variables,
+ *  producing 31 × 5 = 155 statistics entries.
  */
 
 // ── Constants ───────────────────────────────────────────────────────────────
 export const MODEL_INFO = {
   description: 'Bayesian logistic regression  (20-dimensional θ)',
-  nTheta:   20,    // real app has 47; using 20 for demo performance
+  nTheta:   20,    // using 20 for demo performance
   nChains:   4,
   nDraws:  2000,
   nWarmup: 1000,

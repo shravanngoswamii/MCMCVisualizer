@@ -6,11 +6,11 @@
         <div class="header-badge">MCMCVisualizer · Workflow Demo</div>
         <h1>Bayesian Workflow — End-to-End Pipeline</h1>
         <p>
-          Accurate simulation of the real app's data structure:
+          Simulates real-world MCMC sampler output:
           <code>{{ MODEL_INFO.nTheta }} model parameters + {{ HMC_INTERNALS.length }} HMC internals</code>
           stored as <code>param/val</code> variables with OnlineStats running statistics
-          (<code>param/stats[key]/stats/N/field</code>) — exactly the naming and shape the
-          real app produces. All plots rendered <em>in-browser</em> by MCMCVisualizer.
+          (<code>param/stats[key]/stats/N/field</code>).
+          All plots rendered <em>in-browser</em> by MCMCVisualizer.
         </p>
       </div>
     </header>

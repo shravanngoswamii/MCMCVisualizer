@@ -26,8 +26,8 @@ export function scatterPlot(
 
 	function render() {
 		const colors = resolveChainColors(options);
-		const size = options?.markerSize ?? 3;
-		const opacity = options?.markerOpacity ?? 0.4;
+		const size = options?.markerSize ?? 4;
+		const opacity = options?.markerOpacity ?? 0.65;
 
 		const traces = data.chainNames.map((chain, i) => ({
 			x: Array.from(data.getDraws(curX, chain)),
@@ -38,8 +38,8 @@ export function scatterPlot(
 			marker: {
 				size,
 				opacity,
-				color: colorWithAlpha(colors[i % colors.length]!, opacity),
-				line: { width: 0 },
+				color: colors[i % colors.length],
+				line: { width: 0.3, color: colorWithAlpha(colors[i % colors.length]!, 0.8) },
 			},
 			hovertemplate: `${curX}: %{x:.3f}<br>${curY}: %{y:.3f}<extra>%{fullData.name}</extra>`,
 		}));
@@ -87,8 +87,8 @@ export function scatter3dPlot(
 
 	function render() {
 		const colors = resolveChainColors(options);
-		const size = options?.markerSize ?? 2;
-		const opacity = options?.markerOpacity ?? 0.5;
+		const size = options?.markerSize ?? 3;
+		const opacity = options?.markerOpacity ?? 0.6;
 
 		const traces = data.chainNames.map((chain, i) => ({
 			x: Array.from(data.getDraws(curX, chain)),
@@ -101,6 +101,7 @@ export function scatter3dPlot(
 				size,
 				opacity,
 				color: colors[i % colors.length],
+				line: { width: 0.2, color: colorWithAlpha(colors[i % colors.length]!, 0.7) },
 			},
 			hovertemplate: `${curX}: %{x:.3f}<br>${curY}: %{y:.3f}<br>${curZ}: %{z:.3f}<extra>%{fullData.name}</extra>`,
 		}));

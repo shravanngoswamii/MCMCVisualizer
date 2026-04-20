@@ -159,9 +159,9 @@ Use this when receiving data from a WebSocket stream or any custom sampler.
 
 ### fromTuringCSV
 
-Parses CSV files produced by Turing.jl / Coinfer.jl. Three sub-formats are auto-detected:
+Parses CSV files produced by Turing.jl and similar MCMC frameworks. Three sub-formats are auto-detected:
 
-**Long format** (Coinfer.jl native output):
+**Long format** (chain/variable/draw columns):
 ```
 chain_name,var_name,draw,var_value
 chain#1,mu,0,1.234
@@ -466,7 +466,6 @@ interface PlotOptions {
 **Built-in themes:**
 - `'dark'` — Dark background (`#181b26` paper, `#13151e` plot area), light text
 - `'light'` — White background, dark text
-- `BAYES_DARK_THEME` — Transparent backgrounds to inherit from parent, matches the Coinfer app design system
 
 **Custom theme:**
 
