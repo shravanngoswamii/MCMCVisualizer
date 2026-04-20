@@ -1,7 +1,6 @@
 import { defineConfig } from 'vitepress';
-import { withMermaid } from 'vitepress-plugin-mermaid';
 
-export default withMermaid(defineConfig({
+export default defineConfig({
   title: 'MCMCVisualizer',
   description: 'Parse, analyze, plot, and export MCMC sampling data in JavaScript/TypeScript.',
   base: process.env.DOCS_BASE ?? '/MCMCVisualizer/',
@@ -88,4 +87,4 @@ export default withMermaid(defineConfig({
   markdown: {
     theme: { light: 'github-light', dark: 'github-dark' },
   },
-}));
+});
