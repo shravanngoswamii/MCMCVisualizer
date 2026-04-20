@@ -1832,8 +1832,8 @@ function pairPlot(container, data, variables, options) {
         dimensions: dims,
         name: chain,
         marker: {
-          size: 2,
-          opacity: 0.3,
+          size: 3,
+          opacity: 0.55,
           color: colors[i % colors.length]
         },
         showupperhalf: false,
@@ -1874,8 +1874,8 @@ function scatterPlot(container, data, variableX, variableY, options) {
   let curY = variableY;
   function render() {
     const colors = resolveChainColors(options);
-    const size = options?.markerSize ?? 3;
-    const opacity = options?.markerOpacity ?? 0.4;
+    const size = options?.markerSize ?? 4;
+    const opacity = options?.markerOpacity ?? 0.65;
     const traces = data.chainNames.map((chain, i) => ({
       x: Array.from(data.getDraws(curX, chain)),
       y: Array.from(data.getDraws(curY, chain)),
@@ -1885,8 +1885,8 @@ function scatterPlot(container, data, variableX, variableY, options) {
       marker: {
         size,
         opacity,
-        color: colorWithAlpha(colors[i % colors.length], opacity),
-        line: { width: 0 }
+        color: colors[i % colors.length],
+        line: { width: 0.3, color: colorWithAlpha(colors[i % colors.length], 0.8) }
       },
       hovertemplate: `${curX}: %{x:.3f}<br>${curY}: %{y:.3f}<extra>%{fullData.name}</extra>`
     }));
@@ -1922,8 +1922,8 @@ function scatter3dPlot(container, data, variableX, variableY, variableZ, options
   let curZ = variableZ;
   function render() {
     const colors = resolveChainColors(options);
-    const size = options?.markerSize ?? 2;
-    const opacity = options?.markerOpacity ?? 0.5;
+    const size = options?.markerSize ?? 3;
+    const opacity = options?.markerOpacity ?? 0.6;
     const traces = data.chainNames.map((chain, i) => ({
       x: Array.from(data.getDraws(curX, chain)),
       y: Array.from(data.getDraws(curY, chain)),
@@ -1934,7 +1934,8 @@ function scatter3dPlot(container, data, variableX, variableY, variableZ, options
       marker: {
         size,
         opacity,
-        color: colors[i % colors.length]
+        color: colors[i % colors.length],
+        line: { width: 0.2, color: colorWithAlpha(colors[i % colors.length], 0.7) }
       },
       hovertemplate: `${curX}: %{x:.3f}<br>${curY}: %{y:.3f}<br>${curZ}: %{z:.3f}<extra>%{fullData.name}</extra>`
     }));
@@ -2326,27 +2327,42 @@ function violinPlot(container, data, options) {
       const allDraws = Array.from(data.getAllDraws(varName));
       return {
         type: "violin",
-        y: allDraws,
+        x: allDraws,
+        y0: varName,
         name: varName,
-        box: { visible: true },
+        orientation: "h",
+        side: "both",
+        box: { visible: true, width: 0.15 },
         meanline: { visible: true },
-        line: { color: colors[vi % colors.length] },
-        fillcolor: colorWithAlpha(colors[vi % colors.length], 0.3),
-        opacity: 0.85,
+        line: { color: colors[vi % colors.length], width: 1.5 },
+        fillcolor: colorWithAlpha(colors[vi % colors.length], 0.35),
+        opacity: 0.9,
         spanmode: "soft",
-        hovertemplate: "%{y:.4f}<extra>%{fullData.name}</extra>"
+        bandwidth: void 0,
+        width: 0.7,
+        scalemode: "width",
+        hovertemplate: "%{x:.4f}<extra>%{fullData.name}</extra>"
       };
     });
+    const nVars = data.variableNames.length;
     const base = getLayout(options);
     const layout = {
       ...base,
       title: { text: "Violin Plot", ...base["title"] },
+      xaxis: {
+        ...base["xaxis"],
+        title: {
+          text: "Value",
+          ...base["xaxis"]?.["title"] || {}
+        }
+      },
       yaxis: {
         ...base["yaxis"],
-        title: { text: "Value", ...base["yaxis"]?.["title"] || {} }
+        automargin: true
       },
       showlegend: false,
-      height: Math.max(350, data.variableNames.length * 60 + 150)
+      height: Math.max(350, nVars * 100 + 120),
+      margin: { ...base["margin"], l: 120 }
     };
     Plotly.react(container, traces, layout, getConfig());
   }
