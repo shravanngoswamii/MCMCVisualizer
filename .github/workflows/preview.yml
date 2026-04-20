@@ -33,11 +33,11 @@ jobs:
 
       # ── Build Vue workflow demo ────────────────────────────────────────
       - name: Install workflow demo dependencies
-        working-directory: examples/bayes-workflow-demo
+        working-directory: examples/workflow-demo
         run: npm ci
 
       - name: Build workflow demo
-        working-directory: examples/bayes-workflow-demo
+        working-directory: examples/workflow-demo
         run: npm run build
 
       # ── Assemble deploy directory ─────────────────────────────────────
@@ -53,7 +53,7 @@ jobs:
           sed -i "s|../../dist/index.js|./dist/index.js|g" deploy/index.html
 
           mkdir -p deploy/workflow
-          cp -r examples/bayes-workflow-demo/dist/. deploy/workflow/
+          cp -r examples/workflow-demo/dist/. deploy/workflow/
 
       - name: Deploy preview
         uses: JamesIves/github-pages-deploy-action@v4

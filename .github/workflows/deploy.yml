@@ -26,12 +26,15 @@ jobs:
       - name: Build package
         run: npm run build
 
+      - name: Build docs site
+        run: npm run docs:build
+
       - name: Install workflow demo dependencies
-        working-directory: examples/bayes-workflow-demo
+        working-directory: examples/workflow-demo
         run: npm ci
 
       - name: Build workflow demo
-        working-directory: examples/bayes-workflow-demo
+        working-directory: examples/workflow-demo
         run: npm run build
 
       - name: Create npm package tarball
@@ -57,7 +60,11 @@ jobs:
 
           # Vue workflow demo at /workflow/
           mkdir -p deploy/workflow
-          cp -r examples/bayes-workflow-demo/dist/. deploy/workflow/
+          cp -r examples/workflow-demo/dist/. deploy/workflow/
+
+          # VitePress docs site at /docs/
+          mkdir -p deploy/docs
+          cp -r website/.vitepress/dist/. deploy/docs/
 
       - name: Deploy to gh-pages
         uses: JamesIves/github-pages-deploy-action@v4
@@ -65,4 +72,4 @@ jobs:
           branch: gh-pages
           folder: ./deploy
           clean-exclude: pr-previews
-          commit-message: "Deploy: package demo + workflow demo"
+          commit-message: "Deploy: docs site + package demo + workflow demo"

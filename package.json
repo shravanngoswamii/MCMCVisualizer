@@ -31,7 +31,10 @@
     "format": "biome format --write src tests",
     "lint": "tsc --noEmit && biome lint src",
     "check": "biome check --write src",
-    "prepublishOnly": "npm run build && npm run lint"
+    "prepublishOnly": "npm run build && npm run lint",
+    "docs:dev": "vitepress dev website",
+    "docs:build": "vitepress build website",
+    "docs:preview": "vitepress preview website"
   },
   "keywords": [
     "mcmc",
@@ -65,6 +68,7 @@
     "@types/node": "^20.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.4.0",
+    "vitepress": "^1.6.4",
     "vitest": "^2.0.0"
   }
 }

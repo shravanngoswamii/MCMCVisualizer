@@ -8,3 +8,5 @@ coverage/
 .vscode/
 *.local
 dev/
+website/.vitepress/dist/
+website/.vitepress/cache/
