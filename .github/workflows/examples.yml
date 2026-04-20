@@ -34,17 +34,13 @@ jobs:
       - name: Prepare examples directory
         run: |
           mkdir -p deploy/dist
-
-          # Package dist (needed by the vanilla demo via relative path)
           cp dist/index.js dist/index.js.map deploy/dist/
           cp dist/index.cjs dist/index.cjs.map deploy/dist/
 
-          # Vanilla demo at examples/demo/
           mkdir -p deploy/demo
           cp examples/demo/index.html deploy/demo/index.html
           sed -i "s|../../dist/index.js|../dist/index.js|g" deploy/demo/index.html
 
-          # Vue workflow demo at examples/workflow-demo/
           mkdir -p deploy/workflow-demo
           cp -r examples/workflow-demo/dist/. deploy/workflow-demo/
 

@@ -3,7 +3,7 @@ import { defineConfig } from 'vitepress';
 export default defineConfig({
   title: 'MCMCVisualizer',
   description: 'Parse, analyze, plot, and export MCMC sampling data in JavaScript/TypeScript.',
-  base: '/MCMCVisualizer/',
+  base: process.env.DOCS_BASE ?? '/MCMCVisualizer/',
 
   head: [
     ['link', { rel: 'icon', href: '/MCMCVisualizer/favicon.svg', type: 'image/svg+xml' }],
