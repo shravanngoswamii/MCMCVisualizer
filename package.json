@@ -70,5 +70,9 @@
     "typescript": "^5.4.0",
     "vitepress": "^1.6.4",
     "vitest": "^2.0.0"
+  },
+  "dependencies": {
+    "mermaid": "^11.14.0",
+    "vitepress-plugin-mermaid": "^2.0.17"
   }
 }
