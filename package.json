@@ -32,9 +32,9 @@
     "lint": "tsc --noEmit && biome lint src",
     "check": "biome check --write src",
     "prepublishOnly": "npm run build && npm run lint",
-    "docs:dev": "vitepress dev website",
-    "docs:build": "vitepress build website",
-    "docs:preview": "vitepress preview website"
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "keywords": [
     "mcmc",

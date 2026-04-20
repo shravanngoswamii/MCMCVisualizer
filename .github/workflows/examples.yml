@@ -1,0 +1,58 @@
+name: Deploy Examples
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  deploy-examples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build package
+        run: npm run build
+
+      - name: Install workflow-demo dependencies
+        working-directory: examples/workflow-demo
+        run: npm ci
+
+      - name: Build workflow-demo
+        working-directory: examples/workflow-demo
+        run: npm run build
+
+      - name: Prepare examples directory
+        run: |
+          mkdir -p deploy/dist
+
+          # Package dist (needed by the vanilla demo via relative path)
+          cp dist/index.js dist/index.js.map deploy/dist/
+          cp dist/index.cjs dist/index.cjs.map deploy/dist/
+
+          # Vanilla demo at examples/demo/
+          mkdir -p deploy/demo
+          cp examples/demo/index.html deploy/demo/index.html
+          sed -i "s|../../dist/index.js|../dist/index.js|g" deploy/demo/index.html
+
+          # Vue workflow demo at examples/workflow-demo/
+          mkdir -p deploy/workflow-demo
+          cp -r examples/workflow-demo/dist/. deploy/workflow-demo/
+
+      - name: Deploy examples
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: ./deploy
+          target-folder: examples
+          clean: false
+          commit-message: "Deploy examples"

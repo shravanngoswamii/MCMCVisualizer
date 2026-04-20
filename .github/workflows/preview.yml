@@ -47,20 +47,20 @@ jobs:
 
           cp dist/index.js dist/index.js.map deploy/dist/
           cp dist/index.cjs dist/index.cjs.map deploy/dist/
-          cp dist/index.d.ts dist/index.d.cts deploy/dist/
 
-          cp examples/demo/index.html deploy/index.html
-          sed -i "s|../../dist/index.js|./dist/index.js|g" deploy/index.html
+          mkdir -p deploy/demo
+          cp examples/demo/index.html deploy/demo/index.html
+          sed -i "s|../../dist/index.js|../dist/index.js|g" deploy/demo/index.html
 
-          mkdir -p deploy/workflow
-          cp -r examples/workflow-demo/dist/. deploy/workflow/
+          mkdir -p deploy/workflow-demo
+          cp -r examples/workflow-demo/dist/. deploy/workflow-demo/
 
       - name: Deploy preview
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
           folder: ./deploy
-          target-folder: pr-previews/${{ github.event.pull_request.number }}
+          target-folder: pr-previews/${{ github.event.pull_request.number }}/examples
           clean: false
           commit-message: "Preview for PR #${{ github.event.pull_request.number }}"
 
@@ -73,8 +73,8 @@ jobs:
 
             | Page | URL |
             |------|-----|
-            | Vanilla demo | https://shravanngoswamii.github.io/MCMCVisualizer/pr-previews/${{ github.event.pull_request.number }}/ |
-            | Workflow demo (Vue) | https://shravanngoswamii.github.io/MCMCVisualizer/pr-previews/${{ github.event.pull_request.number }}/workflow/ |
+            | Demo | https://shravanngoswamii.github.io/MCMCVisualizer/pr-previews/${{ github.event.pull_request.number }}/examples/demo/ |
+            | Workflow demo | https://shravanngoswamii.github.io/MCMCVisualizer/pr-previews/${{ github.event.pull_request.number }}/examples/workflow-demo/ |
           comment_tag: preview-url-comment
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
